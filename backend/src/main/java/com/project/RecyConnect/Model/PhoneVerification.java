@@ -1,10 +1,7 @@
 package com.project.RecyConnect.Model;
 
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 import java.time.OffsetDateTime;
 
@@ -18,7 +15,10 @@ public class PhoneVerification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+
+    private User user;
     private OffsetDateTime createdAt;
-    private String phone;
     private String code;
 }

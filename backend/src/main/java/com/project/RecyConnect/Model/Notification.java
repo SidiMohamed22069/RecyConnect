@@ -18,11 +18,15 @@ public class Notification {
     private OffsetDateTime createdAt;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "sender_id")
+    private User sender;
+
+    @ManyToOne
+    @JoinColumn(name = "receiver_id")
+    private User receiver;
 
     @Column(columnDefinition = "text")
     private String message;
-    private String receiverPhoneId;
+
     private String title;
 }

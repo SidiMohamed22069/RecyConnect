@@ -1,0 +1,981 @@
+{
+	"info": {
+		"_postman_id": "recyconnect-api-collection",
+		"name": "RecyConnect API",
+		"description": "Collection complète pour tester l'API RecyConnect",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8081",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"john_doe\",\n    \"phone\": 212612345678,\n    \"onesignalPlayerId\": \"player-id-123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"john_doe_updated\",\n    \"phone\": 212698765432,\n    \"onesignalPlayerId\": \"player-id-456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Plastique\",\n    \"description\": \"Déchets plastiques recyclables\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Plastique PET\",\n    \"description\": \"Bouteilles et emballages PET\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Products By User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/user/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "user", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Products By Category",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/category/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "category", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"imageUrl\": \"https://example.com/image.jpg\",\n    \"categoryId\": 1,\n    \"userId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Bouteilles en plastique - Promo\",\n    \"desc\": \"Lot de 50 bouteilles PET propres - Prix réduit\",\n    \"price\": 20.00,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 80,\n    \"status\": \"available\",\n    \"imageUrl\": \"https://example.com/image-updated.jpg\",\n    \"categoryId\": 1,\n    \"userId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Product",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/products/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Negotiations",
+			"item": [
+				{
+					"name": "Get All Negotiations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Negotiation By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Negotiations By Sender",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations/sender/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "sender", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Negotiations By Receiver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations/receiver/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "receiver", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Negotiation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"productId\": 1,\n    \"status\": \"pending\",\n    \"price\": 22.00,\n    \"quantity\": 50\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Negotiation",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"productId\": 1,\n    \"status\": \"accepted\",\n    \"price\": 21.00,\n    \"quantity\": 50\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Negotiation",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "Get All Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notification By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notifications By Receiver",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/receiver/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "receiver", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"title\": \"Nouvelle offre\",\n    \"message\": \"Vous avez reçu une nouvelle offre pour votre produit\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Notification",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"title\": \"Offre acceptée\",\n    \"message\": \"Votre offre a été acceptée par le vendeur\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Notification",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Phone Verifications",
+			"item": [
+				{
+					"name": "Get All Phone Verifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Phone Verification By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Phone Verification By User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications/user/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications", "user", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Phone Verification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 1,\n    \"code\": \"123456\",\n    \"verified\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Phone Verification",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 1,\n    \"code\": \"123456\",\n    \"verified\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Phone Verification",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Stats",
+			"item": [
+				{
+					"name": "Get All User Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/user-stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "user-stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Stats By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/user-stats/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "user-stats", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Stats By User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/user-stats/user/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "user-stats", "user", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create User Stats",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 1,\n    \"totalProducts\": 10,\n    \"recycledCount\": 5,\n    \"availableCount\": 5,\n    \"recyclingRate\": \"50%\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/user-stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "user-stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User Stats",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": 1,\n    \"totalProducts\": 15,\n    \"recycledCount\": 10,\n    \"availableCount\": 5,\n    \"recyclingRate\": \"66%\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/user-stats/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "user-stats", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User Stats",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/user-stats/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "user-stats", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
