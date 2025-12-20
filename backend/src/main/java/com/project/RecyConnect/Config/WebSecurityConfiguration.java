@@ -21,10 +21,6 @@ public class WebSecurityConfiguration {
 
     private final JwtRequestFilter authFilter;
 
-    public WebSecurityConfiguration(JwtRequestFilter authFilter) {
-        this.authFilter = authFilter;
-    }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
