@@ -24,7 +24,11 @@ public class Product {
     private Long quantityTotal;
     private Long quantityAvailable;
     private String status; // mappe ton status_enum; tu peux remplacer par enum Java si tu veux
-    private String imageUrl;
+    
+    @ElementCollection
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls;
 
     @ManyToOne
     @JoinColumn(name = "category_id")

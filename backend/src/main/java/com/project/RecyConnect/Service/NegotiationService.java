@@ -33,6 +33,14 @@ public class NegotiationService {
         dto.setStatus(n.getStatus());
         dto.setPrice(n.getPrice());
         dto.setQuantity(n.getQuantity());
+        // Nested info
+        dto.setSenderUsername(n.getSender() != null ? n.getSender().getUsername() : null);
+        dto.setReceiverUsername(n.getReceiver() != null ? n.getReceiver().getUsername() : null);
+        if (n.getProduct() != null) {
+            dto.setProductTitle(n.getProduct().getTitle());
+            dto.setProductImageUrls(n.getProduct().getImageUrls());
+            dto.setProductUnit(n.getProduct().getUnit());
+        }
         return dto;
     }
 
@@ -66,6 +74,13 @@ public class NegotiationService {
 
     public List<NegotiationDTO> findByReceiverId(Long receiverId) {
         return repo.findByReceiverId(receiverId).stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    public List<NegotiationDTO> findByProductId(Long productId, String status) {
+        return repo.findByProductId(productId).stream()
+                .filter(n -> status == null || status.isEmpty() || status.equalsIgnoreCase(n.getStatus()))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     public NegotiationDTO save(NegotiationDTO dto) {

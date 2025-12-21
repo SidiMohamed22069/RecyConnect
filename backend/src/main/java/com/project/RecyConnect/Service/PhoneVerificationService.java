@@ -6,6 +6,8 @@ import com.project.RecyConnect.Repository.PhoneVerificationRepository;
 import com.project.RecyConnect.Repository.UserRepo;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -25,16 +27,21 @@ public class PhoneVerificationService {
         dto.setId(pv.getId());
         dto.setCreatedAt(pv.getCreatedAt());
         dto.setUserId(pv.getUser() != null ? pv.getUser().getId() : null);
+        dto.setPhone(pv.getPhone());
         dto.setCode(pv.getCode());
+        // Check if expired (10 minutes)
+        if (pv.getCreatedAt() != null) {
+            long minutes = ChronoUnit.MINUTES.between(pv.getCreatedAt(), OffsetDateTime.now());
+            dto.setExpired(minutes > 10);
+        }
         return dto;
     }
 
     private PhoneVerification fromDTO(PhoneVerificationDTO dto) {
         PhoneVerification pv = new PhoneVerification();
         pv.setId(dto.getId());
-        pv.setCreatedAt(dto.getCreatedAt());
-
-        pv.setUser(userRepo.findById(dto.getUserId()).orElse(null));
+        pv.setCreatedAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : OffsetDateTime.now());
+        pv.setPhone(dto.getPhone());
         pv.setCode(dto.getCode());
         if (dto.getUserId() != null)
             userRepo.findById(dto.getUserId()).ifPresent(pv::setUser);
@@ -67,5 +74,10 @@ public class PhoneVerificationService {
 
     public void delete(Long id) {
         repo.deleteById(id);
+    }
+
+    public Optional<PhoneVerificationDTO> verifyCode(String phone, String code) {
+        return repo.findTopByPhoneAndCodeOrderByCreatedAtDesc(phone, code)
+                .map(this::toDTO);
     }
 }
