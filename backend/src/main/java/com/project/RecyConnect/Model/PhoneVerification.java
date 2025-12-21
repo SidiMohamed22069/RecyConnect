@@ -17,8 +17,9 @@ public class PhoneVerification {
 
     @ManyToOne
     @JoinColumn(name = "user_id")
-
     private User user;
+    
+    private String phone;
     private OffsetDateTime createdAt;
     private String code;
 }

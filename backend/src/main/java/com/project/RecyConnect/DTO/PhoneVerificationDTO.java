@@ -1,6 +1,5 @@
 package com.project.RecyConnect.DTO;
 
-import com.project.RecyConnect.Model.User;
 import lombok.Data;
 import java.time.OffsetDateTime;
 
@@ -9,6 +8,8 @@ public class PhoneVerificationDTO {
     private Long id;
     private OffsetDateTime createdAt;
     private Long userId;
+    private String phone;
     private String code;
     private Boolean verified;
+    private Boolean expired;
 }

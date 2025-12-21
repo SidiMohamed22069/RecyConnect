@@ -2,6 +2,7 @@ package com.project.RecyConnect.DTO;
 
 import lombok.Data;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Data
 public class NegotiationDTO {
@@ -13,4 +14,11 @@ public class NegotiationDTO {
     private String status;
     private Double price;
     private Integer quantity;
+    
+    // Nested info for responses
+    private String senderUsername;
+    private String receiverUsername;
+    private String productTitle;
+    private List<String> productImageUrls;
+    private String productUnit;
 }
