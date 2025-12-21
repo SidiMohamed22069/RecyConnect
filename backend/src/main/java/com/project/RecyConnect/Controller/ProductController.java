@@ -5,6 +5,7 @@ import com.project.RecyConnect.Service.ProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -27,9 +28,24 @@ public class ProductController {
         return service.findByUserId(userId);
     }
 
+    @GetMapping("/user/{userId}/status")
+    public List<ProductDTO> getByUserWithStatus(
+            @PathVariable Long userId,
+            @RequestParam(required = false) String status) {
+        return service.findByUserIdWithStatus(userId, status);
+    }
+
     @GetMapping("/category/{categoryId}")
     public List<ProductDTO> getByCategory(@PathVariable Long categoryId) {
         return service.findByCategoryId(categoryId);
+    }
+
+    @GetMapping("/search")
+    public List<ProductDTO> search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long excludeUserId) {
+        return service.search(query, categoryId, excludeUserId);
     }
 
     @PostMapping
@@ -39,6 +55,18 @@ public class ProductController {
     public ResponseEntity<ProductDTO> update(@PathVariable Long id, @RequestBody ProductDTO dto) {
         try {
             return ResponseEntity.ok(service.update(id, dto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{id}/accept-offer")
+    public ResponseEntity<ProductDTO> acceptOffer(
+            @PathVariable Long id,
+            @RequestBody Map<String, Long> request) {
+        try {
+            Long quantityOffer = request.get("quantityOffer");
+            return ResponseEntity.ok(service.updateQuantity(id, quantityOffer));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }

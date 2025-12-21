@@ -33,6 +33,13 @@ public class NegotiationController {
         return service.findByReceiverId(receiverId);
     }
 
+    @GetMapping("/product/{productId}")
+    public List<NegotiationDTO> getByProduct(
+            @PathVariable Long productId,
+            @RequestParam(required = false) String status) {
+        return service.findByProductId(productId, status);
+    }
+
     @PostMapping
     public NegotiationDTO create(@RequestBody NegotiationDTO dto) {
         return service.save(dto);

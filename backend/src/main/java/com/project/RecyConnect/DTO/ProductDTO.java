@@ -2,6 +2,7 @@ package com.project.RecyConnect.DTO;
 
 import lombok.Data;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Data
 public class ProductDTO {
@@ -14,7 +15,12 @@ public class ProductDTO {
     private Long quantityTotal;
     private Long quantityAvailable;
     private String status;
-    private String imageUrl;
+    private List<String> imageUrls;
     private Long categoryId;
     private Long userId;
+    
+    // For nested responses
+    private String categoryName;
+    private String userName;
+    private Long userPhone;
 }

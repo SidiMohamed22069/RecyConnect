@@ -29,6 +29,15 @@ public class PhoneVerificationController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/verify")
+    public ResponseEntity<PhoneVerificationDTO> verifyCode(
+            @RequestParam String phone,
+            @RequestParam String code) {
+        return service.verifyCode(phone, code)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public PhoneVerificationDTO create(@RequestBody PhoneVerificationDTO dto) {
         return service.save(dto);
