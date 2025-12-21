@@ -41,7 +41,6 @@ class ProductTest {
                 .quantityTotal(50L)
                 .quantityAvailable(40L)
                 .status("available")
-                .imageUrl("/images/test.jpg")
                 .imageUrls(Arrays.asList("/images/1.jpg", "/images/2.jpg"))
                 .category(category)
                 .user(user)
@@ -170,19 +169,6 @@ class ProductTest {
         assertNull(emptyProduct.getStatus());
     }
 
-    // ==================== Tests pour getImageUrl() ====================
-
-    @Test
-    void testGetImageUrl_ReturnsCorrectUrl() {
-        assertEquals("/images/test.jpg", product.getImageUrl());
-    }
-
-    @Test
-    void testGetImageUrl_WhenNull() {
-        Product emptyProduct = new Product();
-        assertNull(emptyProduct.getImageUrl());
-    }
-
     // ==================== Tests pour getImageUrls() ====================
 
     @Test
@@ -298,12 +284,6 @@ class ProductTest {
     void testSetStatus() {
         product.setStatus("sold");
         assertEquals("sold", product.getStatus());
-    }
-
-    @Test
-    void testSetImageUrl() {
-        product.setImageUrl("/new/image.jpg");
-        assertEquals("/new/image.jpg", product.getImageUrl());
     }
 
     @Test
