@@ -30,8 +30,7 @@ public class User implements UserDetails {
 
     private Long phone;
 
-    @Lob
-    @Column(length = 100000)
+    @Column(columnDefinition = "TEXT")
     private String imageData;
 
     private String pwd;
