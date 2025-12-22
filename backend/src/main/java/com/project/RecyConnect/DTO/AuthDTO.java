@@ -15,6 +15,18 @@ public class AuthDTO {
         private String username;
         private String password;
         private Long phone;
+        private String verificationCode; // Code de vérification à valider
+    }
+
+    @Data
+    public static class SendCodeRequest {
+        private String phone;
+    }
+
+    @Data
+    public static class VerifyCodeRequest {
+        private String phone;
+        private String code;
     }
 
     @Data
