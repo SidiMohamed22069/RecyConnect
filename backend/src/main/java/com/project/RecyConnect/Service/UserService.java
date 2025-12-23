@@ -69,4 +69,12 @@ public class UserService implements UserDetailsService {
     public void delete(Long id) {
         userRepository.deleteById(id);
     }
+    
+    public Optional<UserDTO> findByPhone(Long phone) {
+        User user = userRepository.findByPhone(phone);
+        if (user == null) {
+            return Optional.empty();
+        }
+        return Optional.of(toDTO(user));
+    }
 }

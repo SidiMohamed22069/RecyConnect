@@ -31,7 +31,7 @@ public class PhoneVerificationController {
 
     @GetMapping("/verify")
     public ResponseEntity<PhoneVerificationDTO> verifyCode(
-            @RequestParam String phone,
+            @RequestParam Long phone,
             @RequestParam String code) {
         return service.verifyCode(phone, code)
                 .map(ResponseEntity::ok)

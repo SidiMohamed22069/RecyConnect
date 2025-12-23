@@ -8,7 +8,7 @@ public class PhoneVerificationDTO {
     private Long id;
     private OffsetDateTime createdAt;
     private Long userId;
-    private String phone;
+    private Long phone;
     private String code;
     private Boolean verified;
     private Boolean expired;

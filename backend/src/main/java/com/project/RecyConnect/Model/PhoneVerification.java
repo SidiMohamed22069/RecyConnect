@@ -19,7 +19,7 @@ public class PhoneVerification {
     @JoinColumn(name = "user_id")
     private User user;
     
-    private String phone;
+    private Long phone;
     private OffsetDateTime createdAt;
     private String code;
 }

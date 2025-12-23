@@ -47,7 +47,7 @@ public class PhoneVerificationService {
         dto.setId(pv.getId());
         dto.setCreatedAt(pv.getCreatedAt());
         dto.setUserId(pv.getUser() != null ? pv.getUser().getId() : null);
-        dto.setPhone(pv.getPhone());
+            dto.setPhone(pv.getPhone() != null ? pv.getPhone() : null);
         dto.setCode(pv.getCode());
         // Check if expired (10 minutes)
         if (pv.getCreatedAt() != null) {
@@ -61,7 +61,7 @@ public class PhoneVerificationService {
         PhoneVerification pv = new PhoneVerification();
         pv.setId(dto.getId());
         pv.setCreatedAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : OffsetDateTime.now());
-        pv.setPhone(dto.getPhone());
+            pv.setPhone(dto.getPhone() != null ? dto.getPhone() : null);
         pv.setCode(dto.getCode());
         if (dto.getUserId() != null)
             userRepo.findById(dto.getUserId()).ifPresent(pv::setUser);
@@ -96,7 +96,7 @@ public class PhoneVerificationService {
         repo.deleteById(id);
     }
 
-    public Optional<PhoneVerificationDTO> verifyCode(String phone, String code) {
+    public Optional<PhoneVerificationDTO> verifyCode(Long phone, String code) {
         return repo.findTopByPhoneAndCodeOrderByCreatedAtDesc(phone, code)
                 .map(this::toDTO);
     }
@@ -112,9 +112,10 @@ public class PhoneVerificationService {
         }
 
         // Vérifier si le téléphone est déjà utilisé
-        if (userRepo.findByPhone(Long.parseLong(normalizedPhone)) != null) {
-            throw new RuntimeException("Ce numéro de téléphone est déjà utilisé");
-        }
+            Long normalizedPhoneLong = Long.parseLong(normalizedPhone);
+            if (userRepo.findByPhone(normalizedPhoneLong) != null) {
+                throw new RuntimeException("Ce numéro de téléphone est déjà utilisé");
+            }
 
         // Générer un code à 6 chiffres
         String code = String.format("%06d", random.nextInt(1000000));
@@ -123,8 +124,8 @@ public class PhoneVerificationService {
         sendSmsViaChinguisoft(normalizedPhone, code);
 
         // Créer l'enregistrement de vérification
-        PhoneVerification verification = PhoneVerification.builder()
-                .phone(normalizedPhone)
+            PhoneVerification verification = PhoneVerification.builder()
+                    .phone(normalizedPhoneLong)
                 .code(code)
                 .createdAt(OffsetDateTime.now())
                 .build();
@@ -224,7 +225,7 @@ public class PhoneVerificationService {
     /**
      * Vérifie le code de vérification avant l'inscription
      */
-    public boolean verifyCodeBeforeRegistration(String phone, String code) {
+    public boolean verifyCodeBeforeRegistration(Long phone, String code) {
         Optional<PhoneVerification> verification = repo.findTopByPhoneAndCodeOrderByCreatedAtDesc(phone, code);
 
         if (verification.isEmpty()) {
@@ -245,7 +246,7 @@ public class PhoneVerificationService {
     /**
      * Supprime les codes de vérification expirés pour un téléphone
      */
-    public void cleanupExpiredCodes(String phone) {
+    public void cleanupExpiredCodes(Long phone) {
         List<PhoneVerification> allCodes = repo.findByPhoneOrderByCreatedAtDesc(phone);
         for (PhoneVerification pv : allCodes) {
             long minutes = ChronoUnit.MINUTES.between(pv.getCreatedAt(), OffsetDateTime.now());

@@ -8,6 +8,6 @@ import java.util.Optional;
 
 public interface PhoneVerificationRepository extends JpaRepository<PhoneVerification, Long> {
     Optional<PhoneVerification> findByUserId(Long userId);
-    List<PhoneVerification> findByPhoneOrderByCreatedAtDesc(String phone);
-    Optional<PhoneVerification> findTopByPhoneAndCodeOrderByCreatedAtDesc(String phone, String code);
+    List<PhoneVerification> findByPhoneOrderByCreatedAtDesc(Long phone);
+    Optional<PhoneVerification> findTopByPhoneAndCodeOrderByCreatedAtDesc(Long phone, String code);
 }
