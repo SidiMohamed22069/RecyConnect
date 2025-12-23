@@ -41,4 +41,11 @@ public class UserController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/by-phone/{phone}")
+    public ResponseEntity<UserDTO> getByPhone(@PathVariable Long phone) {
+        return service.findByPhone(phone)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

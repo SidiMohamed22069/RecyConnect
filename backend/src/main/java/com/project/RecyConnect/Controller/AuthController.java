@@ -48,7 +48,7 @@ public class AuthController {
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@RequestBody AuthDTO.VerifyCodeRequest request) {
         boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
-                request.getPhone(), request.getCode());
+            Long.parseLong(request.getPhone()), request.getCode());
         
         if (isValid) {
             return ResponseEntity.ok(new AuthDTO.AuthResponse(
@@ -71,7 +71,7 @@ public class AuthController {
         }
 
         boolean isCodeValid = phoneVerificationService.verifyCodeBeforeRegistration(
-                request.getPhone().toString(), request.getVerificationCode());
+            request.getPhone(), request.getVerificationCode());
         
         if (!isCodeValid) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -87,22 +87,22 @@ public class AuthController {
         // Check if phone already exists
         if (userRepository.findByPhone(request.getPhone()) != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new AuthDTO.AuthResponse("Phone number already exists"));
+                .body(new AuthDTO.AuthResponse("Phone number already exists"));
         }
 
         // Create new user
         User user = User.builder()
-                .username(request.getUsername())
-                .pwd(passwordEncoder.encode(request.getPassword()))
-                .phone(request.getPhone())
-                .role(Role.USER)
-                .imageData(User.DEFAULT_IMAGE_DATA)
-                .build();
+            .username(request.getUsername())
+            .pwd(passwordEncoder.encode(request.getPassword()))
+            .phone(request.getPhone())
+            .role(Role.USER)
+            .imageData(User.DEFAULT_IMAGE_DATA)
+            .build();
 
         User savedUser = userRepository.save(user);
 
         // Nettoyer les codes de vérification expirés
-        phoneVerificationService.cleanupExpiredCodes(request.getPhone().toString());
+        phoneVerificationService.cleanupExpiredCodes(request.getPhone());
 
         // Generate token
         String token = jwtUtil.generateToken(savedUser.getUsername());

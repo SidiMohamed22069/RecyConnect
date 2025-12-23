@@ -363,6 +363,25 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get User By Phone",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/by-phone/212612345678",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "by-phone", "212612345678"]
+						}
+					},
+					"response": []
 				}
 			]
 		},
