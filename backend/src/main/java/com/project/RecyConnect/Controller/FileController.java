@@ -63,7 +63,7 @@ public class FileController {
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             // Return the URL to access the file
-            String fileUrl = "http://localhost:" + serverPort + "/api/files/" + newFilename;
+            String fileUrl = "http://194.163.140.189:" + serverPort + "/api/files/" + newFilename;
 
             return ResponseEntity.ok().body(new FileUploadResponse(fileUrl, newFilename));
         } catch (IOException e) {
