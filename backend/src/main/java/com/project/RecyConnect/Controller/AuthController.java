@@ -1,19 +1,26 @@
 package com.project.RecyConnect.Controller;
 
-import com.project.RecyConnect.DTO.AuthDTO;
-import com.project.RecyConnect.Model.Role;
-import com.project.RecyConnect.Model.User;
-import com.project.RecyConnect.Repository.UserRepo;
-import com.project.RecyConnect.Security.JwtUtil;
-import com.project.RecyConnect.Service.PhoneVerificationService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.project.RecyConnect.DTO.AuthDTO;
+import com.project.RecyConnect.Model.Role;
+import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Repository.UserRepo;
+import com.project.RecyConnect.Security.JwtUtil;
+import com.project.RecyConnect.Service.PhoneVerificationService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -70,8 +77,15 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Code de vérification requis"));
         }
 
+        Long phoneNumber;
+        try {
+            phoneNumber = Long.parseLong(request.getPhone());
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
+        }
         boolean isCodeValid = phoneVerificationService.verifyCodeBeforeRegistration(
-            request.getPhone(), request.getVerificationCode());
+           phoneNumber, request.getVerificationCode());
         
         if (!isCodeValid) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -85,7 +99,7 @@ public class AuthController {
         }
 
         // Check if phone already exists
-        if (userRepository.findByPhone(request.getPhone()) != null) {
+        if (userRepository.findByPhone(phoneNumber) != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new AuthDTO.AuthResponse("Phone number already exists"));
         }
@@ -94,7 +108,7 @@ public class AuthController {
         User user = User.builder()
             .username(request.getUsername())
             .pwd(passwordEncoder.encode(request.getPassword()))
-            .phone(request.getPhone())
+            .phone(phoneNumber)
             .role(Role.USER)
             .imageData(User.DEFAULT_IMAGE_DATA)
             .build();
@@ -102,7 +116,7 @@ public class AuthController {
         User savedUser = userRepository.save(user);
 
         // Nettoyer les codes de vérification expirés
-        phoneVerificationService.cleanupExpiredCodes(request.getPhone());
+        phoneVerificationService.cleanupExpiredCodes(phoneNumber);
 
         // Generate token
         String token = jwtUtil.generateToken(savedUser.getUsername());
