@@ -14,7 +14,7 @@ public class AuthDTO {
     public static class RegisterRequest {
         private String username;
         private String password;
-        private Long phone;
+        private String phone;
         private String verificationCode; // Code de vérification à valider
     }
 
