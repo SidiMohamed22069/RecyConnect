@@ -298,7 +298,6 @@ class UserTest {
                 "password",            // pwd
                 Role.USER,             // role
                 null,                  // products
-                null,                  // userStats
                 null,                  // negotiationsSent
                 null                   // negotiationsReceived
         );

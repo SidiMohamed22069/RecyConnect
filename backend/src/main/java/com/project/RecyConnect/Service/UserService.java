@@ -1,7 +1,10 @@
 package com.project.RecyConnect.Service;
 
 import com.project.RecyConnect.DTO.UserDTO;
+import com.project.RecyConnect.DTO.UserStatsDTO;
+import com.project.RecyConnect.Model.Product;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Repository.ProductRepository;
 import com.project.RecyConnect.Repository.UserRepo;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,9 +18,11 @@ import java.util.stream.Collectors;
 @Service
 public class UserService implements UserDetailsService {
     private final UserRepo userRepository;
+    private final ProductRepository productRepository;
 
-    public UserService(UserRepo userRepository) {
+    public UserService(UserRepo userRepository, ProductRepository productRepository) {
         this.userRepository = userRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
@@ -76,5 +81,34 @@ public class UserService implements UserDetailsService {
             return Optional.empty();
         }
         return Optional.of(toDTO(user));
+    }
+
+    public Optional<UserStatsDTO> getUserStats(Long userId) {
+        return userRepository.findById(userId).map(user -> {
+            List<Product> userProducts = productRepository.findByUserId(userId);
+            
+            int totalProducts = userProducts.size();
+            int recycledCount = (int) userProducts.stream()
+                    .filter(p -> "recycled".equalsIgnoreCase(p.getStatus()))
+                    .count();
+            int availableCount = (int) userProducts.stream()
+                    .filter(p -> "available".equalsIgnoreCase(p.getStatus()))
+                    .count();
+            
+            String recyclingRate = "0%";
+            if (totalProducts > 0) {
+                double rate = (recycledCount * 100.0) / totalProducts;
+                recyclingRate = String.format("%.1f%%", rate);
+            }
+            
+            UserStatsDTO statsDTO = new UserStatsDTO();
+            statsDTO.setUserId(userId);
+            statsDTO.setTotalProducts(totalProducts);
+            statsDTO.setRecycledCount(recycledCount);
+            statsDTO.setAvailableCount(availableCount);
+            statsDTO.setRecyclingRate(recyclingRate);
+            
+            return statsDTO;
+        });
     }
 }

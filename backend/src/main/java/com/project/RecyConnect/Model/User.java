@@ -41,11 +41,6 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Product> products;
 
-
-
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private UserStats userStats;
-
     @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL)
     private List<Negotiation> negotiationsSent;
 
