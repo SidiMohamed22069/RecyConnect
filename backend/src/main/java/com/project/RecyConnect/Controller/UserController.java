@@ -1,6 +1,7 @@
 package com.project.RecyConnect.Controller;
 
 import com.project.RecyConnect.DTO.UserDTO;
+import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +46,13 @@ public class UserController {
     @GetMapping("/by-phone/{phone}")
     public ResponseEntity<UserDTO> getByPhone(@PathVariable Long phone) {
         return service.findByPhone(phone)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/stats")
+    public ResponseEntity<UserStatsDTO> getUserStats(@PathVariable Long id) {
+        return service.getUserStats(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

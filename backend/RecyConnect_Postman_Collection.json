@@ -442,6 +442,25 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get User Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1", "stats"]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1335,143 +1354,6 @@
 							"raw": "{{baseUrl}}/api/phone-verifications/1",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "phone-verifications", "1"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "User Stats",
-			"item": [
-				{
-					"name": "Get All User Stats",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/user-stats",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "user-stats"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get User Stats By ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/user-stats/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "user-stats", "1"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get User Stats By User",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/user-stats/user/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "user-stats", "user", "1"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Create User Stats",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"userId\": 1,\n    \"totalProducts\": 10,\n    \"recycledCount\": 5,\n    \"availableCount\": 5,\n    \"recyclingRate\": \"50%\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/user-stats",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "user-stats"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update User Stats",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"userId\": 1,\n    \"totalProducts\": 15,\n    \"recycledCount\": 10,\n    \"availableCount\": 5,\n    \"recyclingRate\": \"66%\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/user-stats/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "user-stats", "1"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete User Stats",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/user-stats/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "user-stats", "1"]
 						}
 					},
 					"response": []
