@@ -78,8 +78,16 @@ public class AuthController {
         }
 
         Long phoneNumber;
+        Long phoneNumberToSave;
         try {
             phoneNumber = Long.parseLong(request.getPhone());
+            // Enlever le préfixe 222 pour la sauvegarde
+            String phoneStr = request.getPhone();
+            if (phoneStr.startsWith("222")) {
+                phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
+            } else {
+                phoneNumberToSave = phoneNumber;
+            }
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
@@ -98,17 +106,17 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Username already exists"));
         }
 
-        // Check if phone already exists
-        if (userRepository.findByPhone(phoneNumber) != null) {
+        // Check if phone already exists (vérifier avec le numéro sans préfixe)
+        if (userRepository.findByPhone(phoneNumberToSave) != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new AuthDTO.AuthResponse("Phone number already exists"));
         }
 
-        // Create new user
+        // Create new user avec le numéro sans préfixe 222
         User user = User.builder()
             .username(request.getUsername())
             .pwd(passwordEncoder.encode(request.getPassword()))
-            .phone(phoneNumber)
+            .phone(phoneNumberToSave)
             .role(Role.USER)
             .imageData(User.DEFAULT_IMAGE_DATA)
             .build();
@@ -122,13 +130,20 @@ public class AuthController {
         String token = jwtUtil.generateToken(savedUser.getUsername());
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthDTO.AuthResponse(token, savedUser.getId(), savedUser.getUsername(), "Registration successful"));
+                .body(new AuthDTO.AuthResponse(token, savedUser.getId(), savedUser.getUsername(), savedUser.getPhone(), "Registration successful"));
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthDTO.LoginRequest request) {
-        // Find user by phone
-        User user = userRepository.findByPhone(request.getPhone());
+        // Enlever le préfixe 222 si présent
+        Long phoneToSearch = request.getPhone();
+        String phoneStr = String.valueOf(request.getPhone());
+        if (phoneStr.startsWith("222")) {
+            phoneToSearch = Long.parseLong(phoneStr.substring(3));
+        }
+        
+        // Find user by phone (sans préfixe 222)
+        User user = userRepository.findByPhone(phoneToSearch);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new AuthDTO.AuthResponse("User not found with this phone number"));
@@ -145,7 +160,7 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(user.getUsername());
 
-        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), "Login successful"));
+        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), user.getPhone(), "Login successful"));
     }
 
     @PostMapping("/logout")
@@ -173,7 +188,7 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("User not found"));
         }
 
-        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), "User found"));
+        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), user.getPhone(), "User found"));
     }
 }
 

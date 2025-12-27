@@ -35,21 +35,6 @@ public class UserService implements UserDetailsService {
                 , new ArrayList<>());
     }
 
-    // private UserDTO toDTO(User u) {
-    //     UserDTO dto = new UserDTO();
-    //     dto.setId(u.getId());
-    //     dto.setUsername(u.getUsername());
-    //     dto.setPhone(u.getPhone());
-    //     return dto;
-    // }
-
-    // private User fromDTO(UserDTO dto) {
-    //     return User.builder()
-    //             .id(dto.getId())
-    //             .username(dto.getUsername())
-    //             .phone(dto.getPhone())
-    //             .build();
-    // }
     private UserDTO toDTO(User u) {
         UserDTO dto = new UserDTO();
         dto.setId(u.getId());
@@ -77,14 +62,23 @@ public class UserService implements UserDetailsService {
     }
 
     public UserDTO save(UserDTO dto) {
-        User saved = userRepository.save(fromDTO(dto));
-        return toDTO(saved);
+        if (dto.getId() != null) {
+            return userRepository.findById(dto.getId()).map(existing -> {
+                if (dto.getUsername() != null) existing.setUsername(dto.getUsername());
+                if (dto.getPhone() != null) existing.setPhone(dto.getPhone());
+                if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
+                User saved = userRepository.save(existing);
+                return toDTO(saved);
+            }).orElseThrow(() -> new RuntimeException("User not found"));
+        }
+        throw new RuntimeException("Cannot create user via this method - use register endpoint");
     }
 
     public UserDTO update(Long id, UserDTO dto) {
         return userRepository.findById(id).map(existing -> {
-            existing.setUsername(dto.getUsername());
-            existing.setPhone(dto.getPhone());
+            if (dto.getUsername() != null) existing.setUsername(dto.getUsername());
+            if (dto.getPhone() != null) existing.setPhone(dto.getPhone());
+            if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
             User saved = userRepository.save(existing);
             return toDTO(saved);
         }).orElseThrow(() -> new RuntimeException("User not found"));
