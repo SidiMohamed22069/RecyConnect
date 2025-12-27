@@ -1,19 +1,21 @@
 package com.project.RecyConnect.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Product;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Repository.ProductRepository;
 import com.project.RecyConnect.Repository.UserRepo;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -33,11 +35,27 @@ public class UserService implements UserDetailsService {
                 , new ArrayList<>());
     }
 
+    // private UserDTO toDTO(User u) {
+    //     UserDTO dto = new UserDTO();
+    //     dto.setId(u.getId());
+    //     dto.setUsername(u.getUsername());
+    //     dto.setPhone(u.getPhone());
+    //     return dto;
+    // }
+
+    // private User fromDTO(UserDTO dto) {
+    //     return User.builder()
+    //             .id(dto.getId())
+    //             .username(dto.getUsername())
+    //             .phone(dto.getPhone())
+    //             .build();
+    // }
     private UserDTO toDTO(User u) {
         UserDTO dto = new UserDTO();
         dto.setId(u.getId());
         dto.setUsername(u.getUsername());
         dto.setPhone(u.getPhone());
+        dto.setImageData(u.getImageData());
         return dto;
     }
 
@@ -46,6 +64,7 @@ public class UserService implements UserDetailsService {
                 .id(dto.getId())
                 .username(dto.getUsername())
                 .phone(dto.getPhone())
+                .imageData(dto.getImageData())
                 .build();
     }
 
