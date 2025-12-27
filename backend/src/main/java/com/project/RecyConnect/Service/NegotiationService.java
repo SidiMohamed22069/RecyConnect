@@ -96,6 +96,21 @@ public class NegotiationService {
         }).orElseThrow(() -> new RuntimeException("Negotiation not found"));
     }
 
+    public NegotiationDTO patch(Long id, NegotiationDTO dto) {
+        return repo.findById(id).map(existing -> {
+            if (dto.getStatus() != null) existing.setStatus(dto.getStatus());
+            if (dto.getPrice() != null) existing.setPrice(dto.getPrice());
+            if (dto.getQuantity() != null) existing.setQuantity(dto.getQuantity());
+            if (dto.getSenderId() != null)
+                userRepo.findById(dto.getSenderId()).ifPresent(existing::setSender);
+            if (dto.getReceiverId() != null)
+                userRepo.findById(dto.getReceiverId()).ifPresent(existing::setReceiver);
+            if (dto.getProductId() != null)
+                productRepo.findById(dto.getProductId()).ifPresent(existing::setProduct);
+            return toDTO(repo.save(existing));
+        }).orElseThrow(() -> new RuntimeException("Negotiation not found"));
+    }
+
     public void delete(Long id) {
         repo.deleteById(id);
     }

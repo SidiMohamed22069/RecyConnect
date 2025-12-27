@@ -118,6 +118,24 @@ public class ProductService {
         }).orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
+    public ProductDTO patch(Long id, ProductDTO dto) {
+        return repo.findById(id).map(existing -> {
+            if (dto.getTitle() != null) existing.setTitle(dto.getTitle());
+            if (dto.getDesc() != null) existing.setDescription(dto.getDesc());
+            if (dto.getPrice() != null) existing.setPrice(dto.getPrice());
+            if (dto.getUnit() != null) existing.setUnit(dto.getUnit());
+            if (dto.getQuantityTotal() != null) existing.setQuantityTotal(dto.getQuantityTotal());
+            if (dto.getQuantityAvailable() != null) existing.setQuantityAvailable(dto.getQuantityAvailable());
+            if (dto.getStatus() != null) existing.setStatus(dto.getStatus());
+            if (dto.getImageUrls() != null) existing.setImageUrls(dto.getImageUrls());
+            if (dto.getCategoryId() != null)
+                categoryRepo.findById(dto.getCategoryId()).ifPresent(existing::setCategory);
+            if (dto.getUserId() != null)
+                userRepo.findById(dto.getUserId()).ifPresent(existing::setUser);
+            return toDTO(repo.save(existing));
+        }).orElseThrow(() -> new RuntimeException("Product not found"));
+    }
+
     public ProductDTO updateQuantity(Long productId, Long quantityOffer) {
         return repo.findById(productId).map(existing -> {
             Long newQuantity = existing.getQuantityAvailable() - quantityOffer;

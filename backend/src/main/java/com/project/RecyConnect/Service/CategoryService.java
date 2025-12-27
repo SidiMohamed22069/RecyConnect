@@ -55,6 +55,14 @@ public class CategoryService {
         }).orElseThrow(() -> new RuntimeException("Category not found"));
     }
 
+    public CategoryDTO patch(Long id, CategoryDTO dto) {
+        return repo.findById(id).map(existing -> {
+            if (dto.getName() != null) existing.setName(dto.getName());
+            if (dto.getDescription() != null) existing.setDescription(dto.getDescription());
+            return toDTO(repo.save(existing));
+        }).orElseThrow(() -> new RuntimeException("Category not found"));
+    }
+
     public void delete(Long id) {
         repo.deleteById(id);
     }

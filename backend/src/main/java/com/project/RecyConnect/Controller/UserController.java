@@ -37,6 +37,15 @@ public class UserController {
         }
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<UserDTO> patch(@PathVariable Long id, @RequestBody UserDTO dto) {
+        try {
+            return ResponseEntity.ok(service.patch(id, dto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
