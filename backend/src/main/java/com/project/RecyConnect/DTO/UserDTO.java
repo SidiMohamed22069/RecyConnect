@@ -1,12 +1,12 @@
 package com.project.RecyConnect.DTO;
 
-
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import java.util.UUID;
-import java.time.OffsetDateTime;
-
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserDTO {
     private Long id;
     private String username;
