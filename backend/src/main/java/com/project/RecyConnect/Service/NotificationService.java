@@ -68,6 +68,18 @@ public class NotificationService {
         }).orElseThrow(() -> new RuntimeException("Notification not found"));
     }
 
+    public NotificationDTO patch(Long id, NotificationDTO dto) {
+        return repo.findById(id).map(existing -> {
+            if (dto.getTitle() != null) existing.setTitle(dto.getTitle());
+            if (dto.getMessage() != null) existing.setMessage(dto.getMessage());
+            if (dto.getSenderId() != null)
+                userRepo.findById(dto.getSenderId()).ifPresent(existing::setSender);
+            if (dto.getReceiverId() != null)
+                userRepo.findById(dto.getReceiverId()).ifPresent(existing::setReceiver);
+            return toDTO(repo.save(existing));
+        }).orElseThrow(() -> new RuntimeException("Notification not found"));
+    }
+
     public void delete(Long id) {
         repo.deleteById(id);
     }

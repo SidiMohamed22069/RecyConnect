@@ -84,6 +84,16 @@ public class UserService implements UserDetailsService {
         }).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    public UserDTO patch(Long id, UserDTO dto) {
+        return userRepository.findById(id).map(existing -> {
+            if (dto.getUsername() != null) existing.setUsername(dto.getUsername());
+            if (dto.getPhone() != null) existing.setPhone(dto.getPhone());
+            if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
+            User saved = userRepository.save(existing);
+            return toDTO(saved);
+        }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
     public void delete(Long id) {
         userRepository.deleteById(id);
     }

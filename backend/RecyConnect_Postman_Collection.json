@@ -406,6 +406,34 @@
 					"response": []
 				},
 				{
+					"name": "Patch User (Partial Update)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"john_doe_patched\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1"]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Delete User",
 					"request": {
 						"method": "DELETE",
@@ -552,6 +580,34 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"name\": \"Plastique PET\",\n    \"description\": \"Bouteilles et emballages PET\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Category (Partial Update)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Description mise à jour partiellement\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/categories/1",
@@ -780,6 +836,34 @@
 					"response": []
 				},
 				{
+					"name": "Patch Product (Partial Update)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"price\": 22.50,\n    \"status\": \"available\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/products/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "1"]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Accept Offer (Update Quantity)",
 					"request": {
 						"method": "POST",
@@ -990,6 +1074,34 @@
 					"response": []
 				},
 				{
+					"name": "Patch Negotiation (Partial Update)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"accepted\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "1"]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Accept Negotiation",
 					"request": {
 						"method": "PUT",
@@ -1173,6 +1285,34 @@
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"title\": \"Offre acceptée\",\n    \"message\": \"Votre offre a été acceptée par le vendeur\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Patch Notification (Partial Update)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"Message mis à jour partiellement\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/1",

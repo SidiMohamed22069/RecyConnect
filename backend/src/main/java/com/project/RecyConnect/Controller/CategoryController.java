@@ -34,6 +34,15 @@ public class CategoryController {
         }
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<CategoryDTO> patch(@PathVariable Long id, @RequestBody CategoryDTO dto) {
+        try {
+            return ResponseEntity.ok(service.patch(id, dto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);

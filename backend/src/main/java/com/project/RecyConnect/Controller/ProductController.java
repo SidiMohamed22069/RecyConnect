@@ -60,6 +60,15 @@ public class ProductController {
         }
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<ProductDTO> patch(@PathVariable Long id, @RequestBody ProductDTO dto) {
+        try {
+            return ResponseEntity.ok(service.patch(id, dto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PostMapping("/{id}/accept-offer")
     public ResponseEntity<ProductDTO> acceptOffer(
             @PathVariable Long id,
