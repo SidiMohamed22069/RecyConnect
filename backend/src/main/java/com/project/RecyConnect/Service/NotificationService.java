@@ -47,7 +47,12 @@ public class NotificationService {
     private Notification fromDTO(NotificationDTO dto) {
         Notification n = new Notification();
         n.setId(dto.getId());
-        n.setCreatedAt(dto.getCreatedAt());
+        // Si createdAt n'est pas défini ou si c'est une nouvelle notification, utiliser la date actuelle
+        if (dto.getCreatedAt() == null || dto.getId() == null) {
+            n.setCreatedAt(OffsetDateTime.now());
+        } else {
+            n.setCreatedAt(dto.getCreatedAt());
+        }
         n.setTitle(dto.getTitle());
         n.setMessage(dto.getMessage());
         n.setType(dto.getType());
@@ -73,6 +78,10 @@ public class NotificationService {
     }
 
     public NotificationDTO save(NotificationDTO dto) {
+        // S'assurer que createdAt est défini pour les nouvelles notifications
+        if (dto.getCreatedAt() == null || dto.getId() == null) {
+            dto.setCreatedAt(OffsetDateTime.now());
+        }
         return toDTO(repo.save(fromDTO(dto)));
     }
 
@@ -104,6 +113,10 @@ public class NotificationService {
      * Envoie une notification à un utilisateur (WebSocket si en ligne, FCM sinon)
      */
     private void sendNotification(NotificationDTO dto) {
+        // S'assurer que createdAt est défini
+        if (dto.getCreatedAt() == null) {
+            dto.setCreatedAt(OffsetDateTime.now());
+        }
         // 1. Sauvegarder en DB
         Notification saved = repo.save(fromDTO(dto));
         NotificationDTO savedDTO = toDTO(saved);
@@ -205,5 +218,12 @@ public class NotificationService {
                 .filter(n -> n.getIsRead() == null || !n.getIsRead())
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Compte les notifications non lues d'un utilisateur
+     */
+    public long countUnreadNotifications(Long userId) {
+        return repo.countUnreadByReceiverId(userId);
     }
 }
