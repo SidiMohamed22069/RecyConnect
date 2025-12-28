@@ -236,9 +236,11 @@ public class PhoneVerificationService {
 
     /**
      * Vérifie le code de vérification avant l'inscription
+     * Compare uniquement avec le dernier code envoyé à ce numéro
      */
     public boolean verifyCodeBeforeRegistration(Long phone, String code) {
-        Optional<PhoneVerification> verification = repo.findTopByPhoneAndCodeOrderByCreatedAtDesc(phone, code);
+        // Récupérer le dernier code envoyé à ce numéro
+        Optional<PhoneVerification> verification = repo.findTopByPhoneOrderByCreatedAtDesc(phone);
 
         if (verification.isEmpty()) {
             return false;
@@ -252,7 +254,8 @@ public class PhoneVerificationService {
             return false;
         }
 
-        return true;
+        // Comparer le code fourni avec le dernier code envoyé
+        return pv.getCode().equals(code);
     }
 
     /**
