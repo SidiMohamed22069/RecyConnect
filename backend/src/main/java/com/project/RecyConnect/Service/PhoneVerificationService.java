@@ -105,27 +105,30 @@ public class PhoneVerificationService {
      * Génère et envoie un code de vérification pour un numéro de téléphone via Chinguisoft SMS API
      */
     public String sendVerificationCode(String phone) {
-        // Valider le format du numéro mauritanien (+222)
+        // Nettoyer le numéro sans ajouter le préfixe 222 (stockage tel quel)
+        String cleanedPhone = cleanPhoneNumber(phone);
+        Long phoneLong = Long.parseLong(cleanedPhone);
+        
+        // Normaliser le numéro pour l'envoi du SMS (avec préfixe 222)
         String normalizedPhone = normalizePhoneNumber(phone);
         if (!isValidMauritanianPhone(normalizedPhone)) {
             throw new RuntimeException("Le numéro doit être un numéro mauritanien valide (+222XXXXXXXX)");
         }
 
-        // Vérifier si le téléphone est déjà utilisé
-            Long normalizedPhoneLong = Long.parseLong(normalizedPhone);
-            if (userRepo.findByPhone(normalizedPhoneLong) != null) {
-                throw new RuntimeException("Ce numéro de téléphone est déjà utilisé");
-            }
+        // Vérifier si le téléphone est déjà utilisé (avec le numéro nettoyé, sans préfixe)
+        if (userRepo.findByPhone(phoneLong) != null) {
+            throw new RuntimeException("Ce numéro de téléphone est déjà utilisé");
+        }
 
         // Générer un code à 6 chiffres
         String code = String.format("%06d", random.nextInt(1000000));
 
-        // Envoyer le SMS via Chinguisoft API
+        // Envoyer le SMS via Chinguisoft API (avec le numéro normalisé avec 222)
         sendSmsViaChinguisoft(normalizedPhone, code);
 
-        // Créer l'enregistrement de vérification
-            PhoneVerification verification = PhoneVerification.builder()
-                    .phone(normalizedPhoneLong)
+        // Créer l'enregistrement de vérification avec le numéro nettoyé (sans préfixe 222)
+        PhoneVerification verification = PhoneVerification.builder()
+                .phone(phoneLong)
                 .code(code)
                 .createdAt(OffsetDateTime.now())
                 .build();
@@ -136,23 +139,32 @@ public class PhoneVerificationService {
     }
 
     /**
-     * Normalise le numéro de téléphone mauritanien
+     * Nettoie le numéro de téléphone en supprimant les espaces et caractères non numériques
+     * Ne modifie pas le numéro, juste le nettoie (ne retire ni n'ajoute le préfixe 222)
+     * Accepte: +22212345678, 22212345678, 12345678, "12 34 56 78"
+     * Retourne: 22212345678, 22212345678, 12345678, 12345678 (tel quel, juste nettoyé)
+     */
+    private String cleanPhoneNumber(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        // Supprimer tous les espaces et caractères non numériques
+        return phone.replaceAll("[^0-9]", "");
+    }
+
+    /**
+     * Normalise le numéro de téléphone mauritanien pour l'envoi SMS
      * Accepte: +22212345678, 22212345678, 12345678
-     * Retourne: 22212345678
+     * Retourne: 22212345678 (avec préfixe 222 ajouté si nécessaire)
      */
     private String normalizePhoneNumber(String phone) {
         if (phone == null) {
             return null;
         }
-        // Supprimer tous les espaces et caractères non numériques sauf le +
-        String cleaned = phone.replaceAll("[^0-9+]", "");
+        // Nettoyer le numéro d'abord
+        String cleaned = cleanPhoneNumber(phone);
         
-        // Supprimer le + au début si présent
-        if (cleaned.startsWith("+")) {
-            cleaned = cleaned.substring(1);
-        }
-        
-        // Si le numéro ne commence pas par 222, l'ajouter
+        // Si le numéro ne commence pas par 222, l'ajouter (pour l'envoi SMS uniquement)
         if (!cleaned.startsWith("222")) {
             cleaned = "222" + cleaned;
         }
