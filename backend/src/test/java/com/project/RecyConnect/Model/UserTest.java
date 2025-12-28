@@ -299,7 +299,8 @@ class UserTest {
                 Role.USER,             // role
                 null,                  // products
                 null,                  // negotiationsSent
-                null                   // negotiationsReceived
+                null,                  // negotiationsReceived
+                null                   // fcmToken
         );
         
         assertEquals(1L, fullUser.getId());

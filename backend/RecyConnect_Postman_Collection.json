@@ -489,6 +489,35 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Update FCM Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"fcm_token_here_from_firebase_messaging\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1/fcm-token",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1", "fcm-token"],
+							"description": "Enregistre ou met à jour le token FCM d'un utilisateur pour recevoir les notifications push"
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1041,7 +1070,8 @@
 							"raw": "{{baseUrl}}/api/negotiations",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "negotiations"]
-						}
+						},
+						"description": "Crée une nouvelle négociation. Une notification sera automatiquement envoyée au receiver."
 					},
 					"response": []
 				},
@@ -1153,7 +1183,37 @@
 							"raw": "{{baseUrl}}/api/negotiations/1",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "negotiations", "1"]
-						}
+						},
+						"description": "Rejette une négociation. Utilisez 'refused' pour déclencher une notification au sender."
+					},
+					"response": []
+				},
+				{
+					"name": "Refuse Negotiation (triggers notification)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"refused\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/negotiations/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "1"]
+						},
+						"description": "Refuse une offre. Une notification sera automatiquement envoyée au sender de l'offre."
 					},
 					"response": []
 				},
@@ -1337,6 +1397,81 @@
 							"raw": "{{baseUrl}}/api/notifications/1",
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "notifications", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/receiver/1/unread",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "receiver", "1", "unread"],
+							"description": "Récupère toutes les notifications non lues d'un utilisateur"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/1/read",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "1", "read"],
+							"description": "Marque une notification comme lue"
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin Notifications",
+			"description": "Endpoints pour les notifications admin (nécessite rôle ADMIN)",
+			"item": [
+				{
+					"name": "Send Broadcast Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Nouveau forfait disponible !\",\n    \"message\": \"Découvrez notre nouveau forfait premium avec des avantages exclusifs. Profitez-en maintenant !\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/notifications/broadcast",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "notifications", "broadcast"],
+							"description": "Envoie une notification à tous les utilisateurs (nécessite rôle ADMIN)"
 						}
 					},
 					"response": []

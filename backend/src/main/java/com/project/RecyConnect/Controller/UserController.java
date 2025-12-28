@@ -65,4 +65,15 @@ public class UserController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+    
+    @PostMapping("/{id}/fcm-token")
+    public ResponseEntity<Void> updateFcmToken(@PathVariable Long id, @RequestBody FcmTokenDTO dto) {
+        service.updateFcmToken(id, dto.getToken());
+        return ResponseEntity.ok().build();
+    }
+    
+    @lombok.Data
+    public static class FcmTokenDTO {
+        private String token;
+    }
 }

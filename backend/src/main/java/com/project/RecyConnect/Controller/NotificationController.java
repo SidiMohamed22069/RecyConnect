@@ -53,4 +53,15 @@ public class NotificationController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+    
+    @GetMapping("/receiver/{receiverId}/unread")
+    public List<NotificationDTO> getUnreadByReceiver(@PathVariable Long receiverId) {
+        return service.getUnreadNotifications(receiverId);
+    }
+    
+    @PatchMapping("/{id}/read")
+    public ResponseEntity<Void> markAsRead(@PathVariable Long id) {
+        service.markAsRead(id);
+        return ResponseEntity.ok().build();
+    }
 }

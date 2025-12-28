@@ -215,7 +215,7 @@ class NotificationTest {
 
     @Test
     void testAllArgsConstructor() {
-        Notification full = new Notification(1L, now, sender, receiver, "Full Message", "Full Title");
+        Notification full = new Notification(1L, now, sender, receiver, "Full Message", "Full Title", "OFFER_RECEIVED", 1L, false);
         
         assertEquals(1L, full.getId());
         assertEquals(now, full.getCreatedAt());
@@ -223,6 +223,9 @@ class NotificationTest {
         assertEquals(receiver, full.getReceiver());
         assertEquals("Full Message", full.getMessage());
         assertEquals("Full Title", full.getTitle());
+        assertEquals("OFFER_RECEIVED", full.getType());
+        assertEquals(1L, full.getRelatedId());
+        assertEquals(false, full.getIsRead());
     }
 
     // ==================== Tests pour equals et hashCode ====================
