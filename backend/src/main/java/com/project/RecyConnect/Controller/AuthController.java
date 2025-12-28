@@ -54,15 +54,24 @@ public class AuthController {
      */
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@RequestBody AuthDTO.VerifyCodeRequest request) {
-        boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
-            Long.parseLong(request.getPhone()), request.getCode());
-        
-        if (isValid) {
-            return ResponseEntity.ok(new AuthDTO.AuthResponse(
-                    "Code vérifié avec succès. Vous pouvez maintenant créer votre compte."));
-        } else {
+        try {
+            // Nettoyer le numéro (supprimer espaces, caractères non numériques) sans ajouter préfixe 222
+            String cleanedPhone = request.getPhone().replaceAll("[^0-9]", "");
+            Long phoneLong = Long.parseLong(cleanedPhone);
+            
+            boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
+                phoneLong, request.getCode());
+            
+            if (isValid) {
+                return ResponseEntity.ok(new AuthDTO.AuthResponse(
+                        "Code vérifié avec succès. Vous pouvez maintenant créer votre compte."));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new AuthDTO.AuthResponse("Code invalide ou expiré"));
+            }
+        } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AuthDTO.AuthResponse("Code invalide ou expiré"));
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
     }
 
@@ -78,20 +87,15 @@ public class AuthController {
         }
 
         Long phoneNumber;
-        Long phoneNumberToSave;
         try {
-            phoneNumber = Long.parseLong(request.getPhone());
-            // Enlever le préfixe 222 pour la sauvegarde
-            String phoneStr = request.getPhone();
-            if (phoneStr.startsWith("222")) {
-                phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
-            } else {
-                phoneNumberToSave = phoneNumber;
-            }
+            // Nettoyer le numéro (supprimer espaces, caractères non numériques) sans ajouter préfixe 222
+            String cleanedPhone = request.getPhone().replaceAll("[^0-9]", "");
+            phoneNumber = Long.parseLong(cleanedPhone);
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
+        
         boolean isCodeValid = phoneVerificationService.verifyCodeBeforeRegistration(
            phoneNumber, request.getVerificationCode());
         
@@ -106,17 +110,17 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Username already exists"));
         }
 
-        // Check if phone already exists (vérifier avec le numéro sans préfixe)
-        if (userRepository.findByPhone(phoneNumberToSave) != null) {
+        // Check if phone already exists
+        if (userRepository.findByPhone(phoneNumber) != null) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new AuthDTO.AuthResponse("Phone number already exists"));
         }
 
-        // Create new user avec le numéro sans préfixe 222
+        // Create new user avec le numéro tel quel (sans préfixe 222)
         User user = User.builder()
             .username(request.getUsername())
             .pwd(passwordEncoder.encode(request.getPassword()))
-            .phone(phoneNumberToSave)
+            .phone(phoneNumber)
             .role(Role.USER)
             .imageData(User.DEFAULT_IMAGE_DATA)
             .build();
