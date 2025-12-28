@@ -1422,6 +1422,26 @@
 					"response": []
 				},
 				{
+					"name": "Get Unread Notifications Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/notifications/receiver/1/unread/count",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "receiver", "1", "unread", "count"],
+							"description": "Récupère le nombre de notifications non lues d'un utilisateur (retourne un nombre)"
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Mark Notification as Read",
 					"request": {
 						"method": "PATCH",
