@@ -46,6 +46,8 @@ public class User implements UserDetails {
 
     @OneToMany(mappedBy = "receiver", cascade = CascadeType.ALL)
     private List<Negotiation> negotiationsReceived;
+    
+    private String fcmToken; // Token FCM pour les notifications push
 
 
     @Override

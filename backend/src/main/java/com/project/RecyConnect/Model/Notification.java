@@ -29,4 +29,10 @@ public class Notification {
     private String message;
 
     private String title;
+    
+    private String type; // "OFFER_RECEIVED", "OFFER_REFUSED", "BROADCAST", etc.
+    
+    private Long relatedId; // ID de la négociation/produit concerné
+    
+    private Boolean isRead = false; // Pour marquer comme lue
 }

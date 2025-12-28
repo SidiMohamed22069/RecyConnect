@@ -134,4 +134,11 @@ public class UserService implements UserDetailsService {
             return statsDTO;
         });
     }
+    
+    public void updateFcmToken(Long userId, String fcmToken) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setFcmToken(fcmToken);
+            userRepository.save(user);
+        });
+    }
 }

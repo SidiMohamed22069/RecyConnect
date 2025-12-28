@@ -16,11 +16,14 @@ public class NegotiationService {
     private final NegotiationRepository repo;
     private final UserRepo userRepo;
     private final ProductRepository productRepo;
+    private final NotificationService notificationService;
 
-    public NegotiationService(NegotiationRepository repo, UserRepo userRepo, ProductRepository productRepo) {
+    public NegotiationService(NegotiationRepository repo, UserRepo userRepo, 
+                             ProductRepository productRepo, NotificationService notificationService) {
         this.repo = repo;
         this.userRepo = userRepo;
         this.productRepo = productRepo;
+        this.notificationService = notificationService;
     }
 
     private NegotiationDTO toDTO(Negotiation n) {
@@ -84,7 +87,19 @@ public class NegotiationService {
     }
 
     public NegotiationDTO save(NegotiationDTO dto) {
-        return toDTO(repo.save(fromDTO(dto)));
+        NegotiationDTO saved = toDTO(repo.save(fromDTO(dto)));
+        
+        // 🔔 Notification: Nouvelle offre reçue
+        if (saved.getReceiverId() != null && saved.getSenderId() != null) {
+            notificationService.sendOfferNotification(
+                saved.getReceiverId(),  // User qui reçoit l'offre
+                saved.getSenderId(),    // User qui envoie
+                saved.getId(),          // ID de la négociation
+                saved.getProductTitle() != null ? saved.getProductTitle() : "un produit" // Info du produit
+            );
+        }
+        
+        return saved;
     }
 
     public NegotiationDTO update(Long id, NegotiationDTO dto) {
@@ -98,6 +113,8 @@ public class NegotiationService {
 
     public NegotiationDTO patch(Long id, NegotiationDTO dto) {
         return repo.findById(id).map(existing -> {
+            String oldStatus = existing.getStatus();
+            
             if (dto.getStatus() != null) existing.setStatus(dto.getStatus());
             if (dto.getPrice() != null) existing.setPrice(dto.getPrice());
             if (dto.getQuantity() != null) existing.setQuantity(dto.getQuantity());
@@ -107,7 +124,24 @@ public class NegotiationService {
                 userRepo.findById(dto.getReceiverId()).ifPresent(existing::setReceiver);
             if (dto.getProductId() != null)
                 productRepo.findById(dto.getProductId()).ifPresent(existing::setProduct);
-            return toDTO(repo.save(existing));
+            
+            NegotiationDTO updated = toDTO(repo.save(existing));
+            
+            // 🔔 Notification: Offre refusée
+            if ("refused".equalsIgnoreCase(updated.getStatus()) 
+                && !"refused".equalsIgnoreCase(oldStatus)
+                && updated.getSenderId() != null 
+                && updated.getReceiverId() != null) {
+                
+                notificationService.sendRefusalNotification(
+                    updated.getSenderId(),    // User qui a envoyé l'offre
+                    updated.getReceiverId(),  // User qui refuse
+                    updated.getId(),
+                    updated.getProductTitle() != null ? updated.getProductTitle() : "un produit"
+                );
+            }
+            
+            return updated;
         }).orElseThrow(() -> new RuntimeException("Negotiation not found"));
     }
 
