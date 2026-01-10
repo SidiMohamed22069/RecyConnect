@@ -22,5 +22,5 @@ public class ProductDTO {
     // For nested responses
     private String categoryName;
     private String userName;
-    private String userImage;
+    private Long userPhone;
 }

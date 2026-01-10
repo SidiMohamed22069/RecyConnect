@@ -1,7 +1,10 @@
 package com.project.RecyConnect.Controller;
 
 import com.project.RecyConnect.DTO.ProductDTO;
+import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Service.ProductService;
+import com.project.RecyConnect.Service.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -12,7 +15,12 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductService service;
-    public ProductController(ProductService service) { this.service = service; }
+    private final UserService userService;
+    
+    public ProductController(ProductService service, UserService userService) { 
+        this.service = service;
+        this.userService = userService;
+    }
 
     @GetMapping
     public List<ProductDTO> getAll() { return service.findAll(); }
@@ -49,10 +57,30 @@ public class ProductController {
     }
 
     @PostMapping
-    public ProductDTO create(@RequestBody ProductDTO dto) { return service.save(dto); }
+    public ResponseEntity<ProductDTO> create(@RequestBody ProductDTO dto) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Définir automatiquement l'utilisateur connecté comme propriétaire du produit
+        dto.setUserId(currentUser.getId());
+        return ResponseEntity.ok(service.save(dto));
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<ProductDTO> update(@PathVariable Long id, @RequestBody ProductDTO dto) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Vérifier que l'utilisateur est propriétaire du produit
+        ProductDTO existing = service.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!existing.getUserId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         try {
             return ResponseEntity.ok(service.update(id, dto));
         } catch (RuntimeException e) {
@@ -62,6 +90,18 @@ public class ProductController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<ProductDTO> patch(@PathVariable Long id, @RequestBody ProductDTO dto) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Vérifier que l'utilisateur est propriétaire du produit
+        ProductDTO existing = service.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!existing.getUserId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         try {
             return ResponseEntity.ok(service.patch(id, dto));
         } catch (RuntimeException e) {
@@ -73,6 +113,18 @@ public class ProductController {
     public ResponseEntity<ProductDTO> acceptOffer(
             @PathVariable Long id,
             @RequestBody Map<String, Long> request) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Vérifier que l'utilisateur est propriétaire du produit
+        ProductDTO existing = service.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!existing.getUserId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         try {
             Long quantityOffer = request.get("quantityOffer");
             return ResponseEntity.ok(service.updateQuantity(id, quantityOffer));
@@ -83,6 +135,18 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        // Vérifier que l'utilisateur est propriétaire du produit
+        ProductDTO existing = service.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!existing.getUserId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         service.delete(id);
         return ResponseEntity.noContent().build();
     }

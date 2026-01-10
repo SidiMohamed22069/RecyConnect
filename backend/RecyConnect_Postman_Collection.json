@@ -22,140 +22,150 @@
 			"name": "Auth",
 			"description": "Endpoints d'authentification JWT",
 			"item": [
-				   {
-					   "name": "Send Verification Code",
-					   "request": {
-						   "method": "POST",
-						   "header": [
-							   { "key": "Content-Type", "value": "application/json", "type": "text" }
-						   ],
-						   "body": {
-							   "mode": "raw",
-							   "raw": "{\n    \"phone\": \"212612345678\"\n}"
-						   },
-						   "url": {
-							   "raw": "{{baseUrl}}/api/auth/send-code",
-							   "host": ["{{baseUrl}}"],
-							   "path": ["api", "auth", "send-code"]
-						   }
-					   },
-					   "response": []
-				   },
-				   {
-					   "name": "Verify Code",
-					   "request": {
-						   "method": "POST",
-						   "header": [
-							   { "key": "Content-Type", "value": "application/json", "type": "text" }
-						   ],
-						   "body": {
-							   "mode": "raw",
-							   "raw": "{\n    \"phone\": \"212612345678\",\n    \"code\": \"123456\"\n}"
-						   },
-						   "url": {
-							   "raw": "{{baseUrl}}/api/auth/verify-code",
-							   "host": ["{{baseUrl}}"],
-							   "path": ["api", "auth", "verify-code"]
-						   }
-					   },
-					   "response": []
-				   },
-				   {
-					   "name": "Register",
-					   "event": [
-						   {
-							   "listen": "test",
-							   "script": {
-								   "exec": [
-									   "var jsonData = pm.response.json();",
-									   "if (jsonData.token) {",
-									   "    pm.collectionVariables.set('token', jsonData.token);",
-									   "}"
-								   ],
-								   "type": "text/javascript"
-							   }
-						   }
-					   ],
-					   "request": {
-						   "method": "POST",
-						   "header": [
-							   { "key": "Content-Type", "value": "application/json", "type": "text" }
-						   ],
-						   "body": {
-							   "mode": "raw",
-							   "raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"password123\",\n    \"phone\": 212612345678,\n    \"verificationCode\": \"123456\"\n}"
-						   },
-						   "url": {
-							   "raw": "{{baseUrl}}/api/auth/register",
-							   "host": ["{{baseUrl}}"],
-							   "path": ["api", "auth", "register"]
-						   }
-					   },
-					   "response": []
-				   },
-				   {
-					   "name": "Login",
-					   "event": [
-						   {
-							   "listen": "test",
-							   "script": {
-								   "exec": [
-									   "var jsonData = pm.response.json();",
-									   "if (jsonData.token) {",
-									   "    pm.collectionVariables.set('token', jsonData.token);",
-									   "}"
-								   ],
-								   "type": "text/javascript"
-							   }
-						   }
-					   ],
-					   "request": {
-						   "method": "POST",
-						   "header": [
-							   { "key": "Content-Type", "value": "application/json", "type": "text" }
-						   ],
-						   "body": {
-							   "mode": "raw",
-							   "raw": "{\n    \"phone\": 212612345678,\n    \"password\": \"password123\"\n}"
-						   },
-						   "url": {
-							   "raw": "{{baseUrl}}/api/auth/login",
-							   "host": ["{{baseUrl}}"],
-							   "path": ["api", "auth", "login"]
-						   }
-					   },
-					   "response": []
-				   },
-				   {
-					   "name": "Logout",
-					   "request": {
-						   "method": "POST",
-						   "header": [
-							   { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-						   ],
-						   "url": {
-							   "raw": "{{baseUrl}}/api/auth/logout",
-							   "host": ["{{baseUrl}}"],
-							   "path": ["api", "auth", "logout"]
-						   }
-					   },
-					   "response": []
-				   },
-				   {
-					   "name": "Get Current User",
-					   "request": {
-						   "method": "GET",
-						   "header": [
-							   { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-						   ],
-						   "url": {
-							   "raw": "{{baseUrl}}/api/auth/me",
-							   "host": ["{{baseUrl}}"],
-							   "path": ["api", "auth", "me"]
-						   }
-					   },
-					   "response": []
-				   },
+				{
+					"name": "Send Verification Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone\": \"212612345678\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/send-code",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"send-code"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone\": \"212612345678\",\n    \"code\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify-code",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"verify-code"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"password123\",\n    \"phone\": 212612345678,\n    \"verificationCode\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set('token', jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone\": 212612345678,\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
 				{
 					"name": "Get Current User",
 					"request": {
@@ -169,8 +179,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/auth/me",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "me"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
 						}
 					},
 					"response": []
@@ -199,8 +215,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/auth/logout",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "logout"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
 						}
 					},
 					"response": []
@@ -234,8 +256,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/files/upload",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "files", "upload"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"upload"
+							]
 						}
 					},
 					"response": []
@@ -268,8 +296,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/files/upload-multiple",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "files", "upload-multiple"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"upload-multiple"
+							]
 						}
 					},
 					"response": []
@@ -281,8 +315,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/files/example-filename.jpg",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "files", "example-filename.jpg"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"example-filename.jpg"
+							]
 						}
 					},
 					"response": []
@@ -300,8 +340,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/files/example-filename.jpg",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "files", "example-filename.jpg"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"files",
+								"example-filename.jpg"
+							]
 						}
 					},
 					"response": []
@@ -324,8 +370,13 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/users",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
 						}
 					},
 					"response": []
@@ -343,8 +394,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -371,8 +428,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/users",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
 						}
 					},
 					"response": []
@@ -399,8 +461,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -427,8 +495,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -446,8 +520,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -465,8 +545,15 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/users/by-phone/212612345678",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "by-phone", "212612345678"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"by-phone",
+								"212612345678"
+							]
 						}
 					},
 					"response": []
@@ -484,8 +571,15 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1/stats",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1", "stats"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1",
+								"stats"
+							]
 						}
 					},
 					"response": []
@@ -512,8 +606,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1/fcm-token",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1", "fcm-token"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1",
+								"fcm-token"
+							],
 							"description": "Enregistre ou met à jour le token FCM d'un utilisateur pour recevoir les notifications push"
 						}
 					},
@@ -528,17 +629,16 @@
 					"name": "Get All Categories",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/categories",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "categories"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories"
+							]
 						}
 					},
 					"response": []
@@ -547,17 +647,17 @@
 					"name": "Get Category By ID",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/categories/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "categories", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -583,9 +683,15 @@
 							"raw": "{\n    \"name\": \"Plastique\",\n    \"description\": \"Déchets plastiques recyclables\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/categories",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "categories"]
+							"raw": "{{baseUrl}}/api/admin/categories",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"categories"
+							]
 						}
 					},
 					"response": []
@@ -611,9 +717,16 @@
 							"raw": "{\n    \"name\": \"Plastique PET\",\n    \"description\": \"Bouteilles et emballages PET\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/categories/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "categories", "1"]
+							"raw": "{{baseUrl}}/api/admin/categories/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"categories",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -639,9 +752,16 @@
 							"raw": "{\n    \"description\": \"Description mise à jour partiellement\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/categories/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "categories", "1"]
+							"raw": "{{baseUrl}}/api/admin/categories/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"categories",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -658,9 +778,16 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/categories/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "categories", "1"]
+							"raw": "{{baseUrl}}/api/admin/categories/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"categories",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -674,17 +801,16 @@
 					"name": "Get All Products",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
 						}
 					},
 					"response": []
@@ -693,17 +819,17 @@
 					"name": "Get Product By ID",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -712,17 +838,18 @@
 					"name": "Get Products By User",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/user/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "user", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"user",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -731,17 +858,19 @@
 					"name": "Get Products By User With Status",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/user/1/status?status=available",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "user", "1", "status"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"user",
+								"1",
+								"status"
+							],
 							"query": [
 								{
 									"key": "status",
@@ -757,17 +886,18 @@
 					"name": "Get Products By Category",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/category/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "category", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"category",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -776,17 +906,17 @@
 					"name": "Search Products",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/search?query=plastique&categoryId=1&excludeUserId=2",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "search"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"search"
+							],
 							"query": [
 								{
 									"key": "query",
@@ -826,13 +956,19 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"imageUrls\": [\n        \"http://localhost:8081/api/files/image1.jpg\",\n        \"http://localhost:8081/api/files/image2.jpg\"\n    ],\n    \"categoryId\": 1,\n    \"userId\": 1\n}"
+							"raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"imageUrls\": [\n        \"http://localhost:8081/api/files/image1.jpg\",\n        \"http://localhost:8081/api/files/image2.jpg\"\n    ],\n    \"categoryId\": 1\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/products",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products"]
-						}
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. L'utilisateur connecté devient automatiquement le propriétaire (userId non requis dans le body). Retourne 401 si non authentifié."
 					},
 					"response": []
 				},
@@ -858,9 +994,16 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1"]
-						}
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"1"
+							]
+						},
+						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. Seul le propriétaire du produit peut le modifier. Retourne 401 si non authentifié, 403 si pas propriétaire."
 					},
 					"response": []
 				},
@@ -886,8 +1029,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -914,8 +1063,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1/accept-offer",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1", "accept-offer"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"1",
+								"accept-offer"
+							]
 						}
 					},
 					"response": []
@@ -933,8 +1089,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -948,17 +1110,16 @@
 					"name": "Get All Negotiations",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations"
+							]
 						}
 					},
 					"response": []
@@ -967,17 +1128,17 @@
 					"name": "Get Negotiation By ID",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -986,17 +1147,18 @@
 					"name": "Get Negotiations By Sender",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/sender/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "sender", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"sender",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1005,17 +1167,18 @@
 					"name": "Get Negotiations By Receiver",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/receiver/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "receiver", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"receiver",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1024,17 +1187,18 @@
 					"name": "Get Negotiations By Product",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/product/1?status=pending",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "product", "1"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"product",
+								"1"
+							],
 							"query": [
 								{
 									"key": "status",
@@ -1064,14 +1228,19 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"productId\": 1,\n    \"status\": \"pending\",\n    \"price\": 22.00,\n    \"quantity\": 50\n}"
+							"raw": "{\n    \"receiverId\": 2,\n    \"productId\": 1,\n    \"status\": \"pending\",\n    \"price\": 22.00,\n    \"quantity\": 50\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations"
+							]
 						},
-						"description": "Crée une nouvelle négociation. Une notification sera automatiquement envoyée au receiver."
+						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. L'utilisateur connecté devient automatiquement l'expéditeur (senderId non requis dans le body). Une notification sera automatiquement envoyée au receiver. Retourne 401 si non authentifié."
 					},
 					"response": []
 				},
@@ -1097,8 +1266,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1125,8 +1300,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1153,8 +1334,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1181,8 +1368,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"1"
+							]
 						},
 						"description": "Rejette une négociation. Utilisez 'refused' pour déclencher une notification au sender."
 					},
@@ -1210,8 +1403,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"1"
+							]
 						},
 						"description": "Refuse une offre. Une notification sera automatiquement envoyée au sender de l'offre."
 					},
@@ -1230,8 +1429,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"negotiations",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1245,18 +1450,18 @@
 					"name": "Get All Notifications",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications"]
-						}
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications"
+							]
+						},
+						"description": "Endpoint public - Aucun token requis"
 					},
 					"response": []
 				},
@@ -1264,18 +1469,19 @@
 					"name": "Get Notification By ID",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "1"]
-						}
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"1"
+							]
+						},
+						"description": "Endpoint public - Aucun token requis"
 					},
 					"response": []
 				},
@@ -1283,18 +1489,20 @@
 					"name": "Get Notifications By Receiver",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
+						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/receiver/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "receiver", "1"]
-						}
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"receiver",
+								"1"
+							]
+						},
+						"description": "Endpoint public - Aucun token requis"
 					},
 					"response": []
 				},
@@ -1320,9 +1528,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications"]
-						}
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications"
+							]
+						},
+						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. Retourne 401 si non authentifié."
 					},
 					"response": []
 				},
@@ -1348,8 +1562,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1376,8 +1596,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1395,8 +1621,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1414,8 +1646,16 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/receiver/1/unread",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "receiver", "1", "unread"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"receiver",
+								"1",
+								"unread"
+							],
 							"description": "Récupère toutes les notifications non lues d'un utilisateur"
 						}
 					},
@@ -1434,8 +1674,17 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/receiver/1/unread/count",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "receiver", "1", "unread", "count"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"receiver",
+								"1",
+								"unread",
+								"count"
+							],
 							"description": "Récupère le nombre de notifications non lues d'un utilisateur (retourne un nombre)"
 						}
 					},
@@ -1454,8 +1703,15 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/1/read",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "1", "read"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"1",
+								"read"
+							],
 							"description": "Marque une notification comme lue"
 						}
 					},
@@ -1489,8 +1745,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/notifications/broadcast",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "notifications", "broadcast"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"notifications",
+								"broadcast"
+							],
 							"description": "Envoie une notification à tous les utilisateurs (nécessite rôle ADMIN)"
 						}
 					},
@@ -1514,8 +1777,13 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/phone-verifications",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"phone-verifications"
+							]
 						}
 					},
 					"response": []
@@ -1533,8 +1801,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/phone-verifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"phone-verifications",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1552,8 +1826,15 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/phone-verifications/user/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "user", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"phone-verifications",
+								"user",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1565,8 +1846,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/phone-verifications/verify?phone=212612345678&code=123456",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "verify"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"phone-verifications",
+								"verify"
+							],
 							"query": [
 								{
 									"key": "phone",
@@ -1600,8 +1887,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/phone-verifications",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"phone-verifications"
+							]
 						}
 					},
 					"response": []
@@ -1628,8 +1920,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/phone-verifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"phone-verifications",
+								"1"
+							]
 						}
 					},
 					"response": []
@@ -1647,8 +1945,14 @@
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/phone-verifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "1"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"phone-verifications",
+								"1"
+							]
 						}
 					},
 					"response": []
