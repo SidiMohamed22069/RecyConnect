@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -140,5 +142,18 @@ public class UserService implements UserDetailsService {
             user.setFcmToken(fcmToken);
             userRepository.save(user);
         });
+    }
+    
+    /**
+     * Récupère l'utilisateur actuellement authentifié depuis le SecurityContext
+     * @return L'utilisateur connecté ou null si non authentifié
+     */
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof UserDetails) {
+            String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+            return userRepository.findByUsername(username);
+        }
+        return null;
     }
 }

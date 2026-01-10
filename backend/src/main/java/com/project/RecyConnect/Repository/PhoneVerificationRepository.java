@@ -10,5 +10,4 @@ public interface PhoneVerificationRepository extends JpaRepository<PhoneVerifica
     Optional<PhoneVerification> findByUserId(Long userId);
     List<PhoneVerification> findByPhoneOrderByCreatedAtDesc(Long phone);
     Optional<PhoneVerification> findTopByPhoneAndCodeOrderByCreatedAtDesc(Long phone, String code);
-    Optional<PhoneVerification> findTopByPhoneOrderByCreatedAtDesc(Long phone);
 }

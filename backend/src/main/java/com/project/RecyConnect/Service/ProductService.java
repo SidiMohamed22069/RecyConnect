@@ -42,7 +42,7 @@ public class ProductService {
         // Add nested info
         dto.setCategoryName(p.getCategory() != null ? p.getCategory().getName() : null);
         dto.setUserName(p.getUser() != null ? p.getUser().getUsername() : null);
-        dto.setUserImage(p.getUser() != null ? p.getUser().getImageData() : null);
+        dto.setUserPhone(p.getUser() != null ? p.getUser().getPhone() : null);
         return dto;
     }
 

@@ -105,30 +105,27 @@ public class PhoneVerificationService {
      * Génère et envoie un code de vérification pour un numéro de téléphone via Chinguisoft SMS API
      */
     public String sendVerificationCode(String phone) {
-        // Nettoyer le numéro sans ajouter le préfixe 222 (stockage tel quel)
-        String cleanedPhone = cleanPhoneNumber(phone);
-        Long phoneLong = Long.parseLong(cleanedPhone);
-        
-        // Normaliser le numéro pour l'envoi du SMS (avec préfixe 222)
+        // Valider le format du numéro mauritanien (+222)
         String normalizedPhone = normalizePhoneNumber(phone);
         if (!isValidMauritanianPhone(normalizedPhone)) {
             throw new RuntimeException("Le numéro doit être un numéro mauritanien valide (+222XXXXXXXX)");
         }
 
-        // Vérifier si le téléphone est déjà utilisé (avec le numéro nettoyé, sans préfixe)
-        if (userRepo.findByPhone(phoneLong) != null) {
-            throw new RuntimeException("Ce numéro de téléphone est déjà utilisé");
-        }
+        // Vérifier si le téléphone est déjà utilisé
+            Long normalizedPhoneLong = Long.parseLong(normalizedPhone);
+            if (userRepo.findByPhone(normalizedPhoneLong) != null) {
+                throw new RuntimeException("Ce numéro de téléphone est déjà utilisé");
+            }
 
         // Générer un code à 6 chiffres
         String code = String.format("%06d", random.nextInt(1000000));
 
-        // Envoyer le SMS via Chinguisoft API (avec le numéro normalisé avec 222)
+        // Envoyer le SMS via Chinguisoft API
         sendSmsViaChinguisoft(normalizedPhone, code);
 
-        // Créer l'enregistrement de vérification avec le numéro nettoyé (sans préfixe 222)
-        PhoneVerification verification = PhoneVerification.builder()
-                .phone(phoneLong)
+        // Créer l'enregistrement de vérification
+            PhoneVerification verification = PhoneVerification.builder()
+                    .phone(normalizedPhoneLong)
                 .code(code)
                 .createdAt(OffsetDateTime.now())
                 .build();
@@ -139,32 +136,23 @@ public class PhoneVerificationService {
     }
 
     /**
-     * Nettoie le numéro de téléphone en supprimant les espaces et caractères non numériques
-     * Ne modifie pas le numéro, juste le nettoie (ne retire ni n'ajoute le préfixe 222)
-     * Accepte: +22212345678, 22212345678, 12345678, "12 34 56 78"
-     * Retourne: 22212345678, 22212345678, 12345678, 12345678 (tel quel, juste nettoyé)
-     */
-    private String cleanPhoneNumber(String phone) {
-        if (phone == null) {
-            return null;
-        }
-        // Supprimer tous les espaces et caractères non numériques
-        return phone.replaceAll("[^0-9]", "");
-    }
-
-    /**
-     * Normalise le numéro de téléphone mauritanien pour l'envoi SMS
+     * Normalise le numéro de téléphone mauritanien
      * Accepte: +22212345678, 22212345678, 12345678
-     * Retourne: 22212345678 (avec préfixe 222 ajouté si nécessaire)
+     * Retourne: 22212345678
      */
     private String normalizePhoneNumber(String phone) {
         if (phone == null) {
             return null;
         }
-        // Nettoyer le numéro d'abord
-        String cleaned = cleanPhoneNumber(phone);
+        // Supprimer tous les espaces et caractères non numériques sauf le +
+        String cleaned = phone.replaceAll("[^0-9+]", "");
         
-        // Si le numéro ne commence pas par 222, l'ajouter (pour l'envoi SMS uniquement)
+        // Supprimer le + au début si présent
+        if (cleaned.startsWith("+")) {
+            cleaned = cleaned.substring(1);
+        }
+        
+        // Si le numéro ne commence pas par 222, l'ajouter
         if (!cleaned.startsWith("222")) {
             cleaned = "222" + cleaned;
         }
@@ -236,11 +224,9 @@ public class PhoneVerificationService {
 
     /**
      * Vérifie le code de vérification avant l'inscription
-     * Compare uniquement avec le dernier code envoyé à ce numéro
      */
     public boolean verifyCodeBeforeRegistration(Long phone, String code) {
-        // Récupérer le dernier code envoyé à ce numéro
-        Optional<PhoneVerification> verification = repo.findTopByPhoneOrderByCreatedAtDesc(phone);
+        Optional<PhoneVerification> verification = repo.findTopByPhoneAndCodeOrderByCreatedAtDesc(phone, code);
 
         if (verification.isEmpty()) {
             return false;
@@ -254,8 +240,7 @@ public class PhoneVerificationService {
             return false;
         }
 
-        // Comparer le code fourni avec le dernier code envoyé
-        return pv.getCode().equals(code);
+        return true;
     }
 
     /**
