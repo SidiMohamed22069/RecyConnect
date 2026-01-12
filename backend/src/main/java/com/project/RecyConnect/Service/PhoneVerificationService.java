@@ -103,29 +103,45 @@ public class PhoneVerificationService {
 
     /**
      * Génère et envoie un code de vérification pour un numéro de téléphone via Chinguisoft SMS API
+     * @param phone Le numéro de téléphone
+     * @param isForgetPassword Si true, vérifie que le numéro existe (pour réinitialisation mot de passe)
+     *                         Si false ou null, vérifie que le numéro n'existe pas (pour inscription)
      */
-    public String sendVerificationCode(String phone) {
+    public String sendVerificationCode(String phone, Boolean isForgetPassword) {
         // Valider le format du numéro mauritanien (+222)
         String normalizedPhone = normalizePhoneNumber(phone);
         if (!isValidMauritanianPhone(normalizedPhone)) {
             throw new RuntimeException("Le numéro doit être un numéro mauritanien valide (+222XXXXXXXX)");
         }
 
-        // Vérifier si le téléphone est déjà utilisé
-            Long normalizedPhoneLong = Long.parseLong(normalizedPhone);
-            if (userRepo.findByPhone(normalizedPhoneLong) != null) {
+        // Enlever le préfixe 222 pour le stockage
+        String phoneWithoutPrefix = normalizedPhone.startsWith("222") 
+            ? normalizedPhone.substring(3) 
+            : normalizedPhone;
+        Long phoneLong = Long.parseLong(phoneWithoutPrefix);
+
+        // Vérification conditionnelle selon le contexte (inscription ou oubli de mot de passe)
+        if (Boolean.TRUE.equals(isForgetPassword)) {
+            // Pour l'oubli de mot de passe : le numéro DOIT exister
+            if (userRepo.findByPhone(phoneLong) == null) {
+                throw new RuntimeException("Ce numéro de téléphone n'existe pas. Veuillez créer un compte.");
+            }
+        } else {
+            // Pour l'inscription : le numéro NE DOIT PAS être déjà utilisé
+            if (userRepo.findByPhone(phoneLong) != null) {
                 throw new RuntimeException("Ce numéro de téléphone est déjà utilisé");
             }
+        }
 
         // Générer un code à 6 chiffres
         String code = String.format("%06d", random.nextInt(1000000));
 
-        // Envoyer le SMS via Chinguisoft API
+        // Envoyer le SMS via Chinguisoft API (avec préfixe 222)
         sendSmsViaChinguisoft(normalizedPhone, code);
 
-        // Créer l'enregistrement de vérification
-            PhoneVerification verification = PhoneVerification.builder()
-                    .phone(normalizedPhoneLong)
+        // Créer l'enregistrement de vérification (sans préfixe 222)
+        PhoneVerification verification = PhoneVerification.builder()
+                .phone(phoneLong)
                 .code(code)
                 .createdAt(OffsetDateTime.now())
                 .build();

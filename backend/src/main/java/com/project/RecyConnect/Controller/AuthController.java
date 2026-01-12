@@ -39,7 +39,7 @@ public class AuthController {
     @PostMapping("/send-code")
     public ResponseEntity<?> sendVerificationCode(@RequestBody AuthDTO.SendCodeRequest request) {
         try {
-            String code = phoneVerificationService.sendVerificationCode(request.getPhone());
+            String code = phoneVerificationService.sendVerificationCode(request.getPhone(), request.getIsForgetPassword());
             // En production, ne pas retourner le code dans la réponse !
             return ResponseEntity.ok(new AuthDTO.AuthResponse(
                     "Code de vérification envoyé. Code (dev only): " + code));
@@ -54,15 +54,27 @@ public class AuthController {
      */
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@RequestBody AuthDTO.VerifyCodeRequest request) {
-        boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
-            Long.parseLong(request.getPhone()), request.getCode());
-        
-        if (isValid) {
-            return ResponseEntity.ok(new AuthDTO.AuthResponse(
-                    "Code vérifié avec succès. Vous pouvez maintenant créer votre compte."));
-        } else {
+        try {
+            // Enlever le préfixe 222 si présent
+            String phoneStr = request.getPhone();
+            Long phoneToVerify = Long.parseLong(phoneStr);
+            if (phoneStr.startsWith("222")) {
+                phoneToVerify = Long.parseLong(phoneStr.substring(3));
+            }
+            
+            boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
+                phoneToVerify, request.getCode());
+            
+            if (isValid) {
+                return ResponseEntity.ok(new AuthDTO.AuthResponse(
+                        "Code vérifié avec succès. Vous pouvez maintenant créer votre compte."));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new AuthDTO.AuthResponse("Code invalide ou expiré"));
+            }
+        } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AuthDTO.AuthResponse("Code invalide ou expiré"));
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
     }
 
@@ -77,12 +89,11 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Code de vérification requis"));
         }
 
-        Long phoneNumber;
         Long phoneNumberToSave;
         try {
-            phoneNumber = Long.parseLong(request.getPhone());
-            // Enlever le préfixe 222 pour la sauvegarde
+            // Enlever le préfixe 222 pour la sauvegarde et la vérification
             String phoneStr = request.getPhone();
+            Long phoneNumber = Long.parseLong(phoneStr);
             if (phoneStr.startsWith("222")) {
                 phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
             } else {
@@ -92,8 +103,9 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
+        // Vérifier le code avec le numéro sans préfixe 222 (comme stocké dans la base)
         boolean isCodeValid = phoneVerificationService.verifyCodeBeforeRegistration(
-           phoneNumber, request.getVerificationCode());
+           phoneNumberToSave, request.getVerificationCode());
         
         if (!isCodeValid) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -123,8 +135,8 @@ public class AuthController {
 
         User savedUser = userRepository.save(user);
 
-        // Nettoyer les codes de vérification expirés
-        phoneVerificationService.cleanupExpiredCodes(phoneNumber);
+        // Nettoyer les codes de vérification expirés (avec le numéro sans préfixe 222)
+        phoneVerificationService.cleanupExpiredCodes(phoneNumberToSave);
 
         // Generate token
         String token = jwtUtil.generateToken(savedUser.getUsername());

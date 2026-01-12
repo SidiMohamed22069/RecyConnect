@@ -29,6 +29,7 @@ public class AuthDTO {
     @AllArgsConstructor
     public static class SendCodeRequest {
         private String phone;
+        private Boolean isForgetPassword;
     }
 
     @Data
