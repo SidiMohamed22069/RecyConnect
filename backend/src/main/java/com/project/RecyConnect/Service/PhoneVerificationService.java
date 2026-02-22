@@ -1,14 +1,5 @@
 package com.project.RecyConnect.Service;
 
-import com.project.RecyConnect.DTO.PhoneVerificationDTO;
-import com.project.RecyConnect.Model.PhoneVerification;
-import com.project.RecyConnect.Repository.PhoneVerificationRepository;
-import com.project.RecyConnect.Repository.UserRepo;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -17,6 +8,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.project.RecyConnect.DTO.PhoneVerificationDTO;
+import com.project.RecyConnect.Model.PhoneVerification;
+import com.project.RecyConnect.Repository.PhoneVerificationRepository;
+import com.project.RecyConnect.Repository.UserRepo;
 
 @Service
 public class PhoneVerificationService {
@@ -199,36 +203,27 @@ public class PhoneVerificationService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             // Essayer différents formats d'authentification
-            headers.set("Authorization", "Bearer " + token);
             headers.set("Validation-token", token);
-            headers.set("X-API-Key", token);
-            headers.set("Token", token);
+            headers.set("Content-Type", "application/json");
 
             // Préparer le body
             Map<String, String> body = new HashMap<>();
             body.put("phone", phone);
             body.put("lang", lang);
             body.put("code", code);
-            body.put("token", token); // Ajouter le token dans le body aussi
 
             HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
 
-            System.out.println("=== DEBUG SMS API ===");
-            System.out.println("URL: " + url);
-            System.out.println("Headers: " + headers);
-            System.out.println("Body: " + body);
+       
 
             // Envoyer la requête
             ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
 
-            System.out.println("Response Status: " + response.getStatusCode());
-            System.out.println("Response Body: " + response.getBody());
 
             if (!response.getStatusCode().is2xxSuccessful()) {
                 throw new RuntimeException("Erreur lors de l'envoi du SMS: " + response.getBody());
             }
 
-            System.out.println("SMS envoyé avec succès à " + phone);
 
         } catch (Exception e) {
             System.err.println("Erreur lors de l'envoi du SMS: " + e.getMessage());
