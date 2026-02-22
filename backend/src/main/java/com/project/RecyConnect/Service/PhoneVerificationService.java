@@ -172,11 +172,6 @@ public class PhoneVerificationService {
             cleaned = cleaned.substring(1);
         }
         
-        // Si le numéro ne commence pas par 222, l'ajouter
-        if (!cleaned.startsWith("222")) {
-            cleaned = "222" + cleaned;
-        }
-        
         return cleaned;
     }
 
