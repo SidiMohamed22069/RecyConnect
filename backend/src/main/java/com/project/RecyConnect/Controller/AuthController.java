@@ -83,10 +83,17 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody AuthDTO.RegisterRequest request) {
-        // Vérifier que le code de vérification est valide
+
+        // Si aucun code n'est fourni, envoyer le SMS et demander la saisie du code
         if (request.getVerificationCode() == null || request.getVerificationCode().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new AuthDTO.AuthResponse("Code de vérification requis"));
+            try {
+                String code = phoneVerificationService.sendVerificationCode(request.getPhone(), false);
+                return ResponseEntity.status(HttpStatus.ACCEPTED)
+                        .body(new AuthDTO.AuthResponse("Code de vérification envoyé. Veuillez saisir le code reçu par SMS."));
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new AuthDTO.AuthResponse(e.getMessage()));
+            }
         }
 
         Long phoneNumberToSave;
