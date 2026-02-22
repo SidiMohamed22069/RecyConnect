@@ -184,7 +184,7 @@ public class PhoneVerificationService {
             return false;
         }
         // Doit commencer par 222 et avoir 11 chiffres au total
-        return phone.matches("^222[0-9]{8}$");
+        return phone.matches("^[0-9]{8}$");
     }
 
     /**
