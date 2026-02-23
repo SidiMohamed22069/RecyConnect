@@ -1,16 +1,5 @@
 package com.project.RecyConnect.Controller;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -21,12 +10,33 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import jakarta.annotation.PostConstruct;
+
 @RestController
 @RequestMapping("/api/files")
 public class FileController {
 
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
+
+    @Value("${app.server.url}")
+    private String serverUrl;
 
     @Value("${server.port:8081}")
     private String serverPort;
@@ -63,7 +73,7 @@ public class FileController {
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             // Return the URL to access the file
-            String fileUrl = "http://194.163.140.189:" + serverPort + "/api/files/" + newFilename;
+            String fileUrl = serverUrl + ":" + serverPort + "/api/files/" + newFilename;
 
             return ResponseEntity.ok().body(new FileUploadResponse(fileUrl, newFilename));
         } catch (IOException e) {
