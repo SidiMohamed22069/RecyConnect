@@ -78,7 +78,7 @@ public class ProductController {
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!existing.getUserId().equals(currentUser.getId())) {
+        if (!existing.getUserId().equals(currentUser.getId()) || currentUser.getRole() != Role.ADMIN) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         try {
@@ -99,7 +99,7 @@ public class ProductController {
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!existing.getUserId().equals(currentUser.getId())) {
+        if (!existing.getUserId().equals(currentUser.getId()) || currentUser.getRole() != Role.ADMIN) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         try {
@@ -144,7 +144,7 @@ public class ProductController {
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!existing.getUserId().equals(currentUser.getId())) {
+        if (!existing.getUserId().equals(currentUser.getId()) || currentUser.getRole() != Role.ADMIN) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         service.delete(id);
