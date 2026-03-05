@@ -1,5 +1,6 @@
 package com.project.RecyConnect.DTO;
 
+import com.project.RecyConnect.Model.Role;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

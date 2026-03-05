@@ -43,6 +43,7 @@ public class UserService implements UserDetailsService {
         dto.setUsername(u.getUsername());
         dto.setPhone(u.getPhone());
         dto.setImageData(u.getImageData());
+        dto.setRole(u.getRole());
         return dto;
     }
 
