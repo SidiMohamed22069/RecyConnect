@@ -22,6 +22,7 @@ public class AuthDTO {
         private String password;
         private String phone;
         private String verificationCode;
+        private String role; // optionnel, default "USER"
     }
 
     @Data
@@ -46,13 +47,15 @@ public class AuthDTO {
         private Long userId;
         private String username;
         private Long phone;
+        private String role;
         private String message;
 
-        public AuthResponse(String token, Long userId, String username, Long phone, String message) {
+        public AuthResponse(String token, Long userId, String username, Long phone, String role, String message) {
             this.token = token;
             this.userId = userId;
             this.username = username;
             this.phone = phone;
+            this.role = role;
             this.message = message;
         }
 

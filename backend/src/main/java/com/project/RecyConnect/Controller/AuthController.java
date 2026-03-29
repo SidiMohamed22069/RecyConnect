@@ -2,6 +2,7 @@ package com.project.RecyConnect.Controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 import com.project.RecyConnect.DTO.AuthDTO;
 import com.project.RecyConnect.Model.Role;
@@ -132,11 +135,17 @@ public class AuthController {
         }
 
         // Create new user avec le numéro sans préfixe 222
+        // Définir le rôle (USER par défaut, ADMIN si spécifié)
+        Role userRole = Role.USER;
+        if (request.getRole() != null && request.getRole().equalsIgnoreCase("ADMIN")) {
+            userRole = Role.ADMIN;
+        }
+        
         User user = User.builder()
             .username(request.getUsername())
             .pwd(passwordEncoder.encode(request.getPassword()))
             .phone(phoneNumberToSave)
-            .role(Role.USER)
+            .role(userRole)
             .imageData(User.DEFAULT_IMAGE_DATA)
             .build();
 
@@ -145,11 +154,62 @@ public class AuthController {
         // Nettoyer les codes de vérification expirés (avec le numéro sans préfixe 222)
         phoneVerificationService.cleanupExpiredCodes(phoneNumberToSave);
 
-        // Generate token
-        String token = jwtUtil.generateToken(savedUser.getUsername());
+        // Generate token with user role
+        String token = jwtUtil.generateToken(savedUser);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthDTO.AuthResponse(token, savedUser.getId(), savedUser.getUsername(), savedUser.getPhone(), "Registration successful"));
+                .body(new AuthDTO.AuthResponse(token, savedUser.getId(), savedUser.getUsername(), savedUser.getPhone(), savedUser.getRole().name(), "Registration successful"));
+    }
+
+    /**
+     * Endpoint pour créer un admin (réservé aux admins existants)
+     */
+    @PostMapping("/register-admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> registerAdmin(@RequestBody AuthDTO.RegisterRequest request) {
+        Long phoneNumberToSave;
+        try {
+            String phoneStr = request.getPhone();
+            Long phoneNumber = Long.parseLong(phoneStr);
+            if (phoneStr.startsWith("222")) {
+                phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
+            } else {
+                phoneNumberToSave = phoneNumber;
+            }
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Numéro de téléphone invalide"));
+        }
+
+        // Vérifier que le téléphone n'existe pas déjà
+        if (userRepository.findByPhone(phoneNumberToSave) != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone already exists"));
+        }
+
+        // Vérifier que le username n'existe pas déjà
+        if (userRepository.findByUsername(request.getUsername()) != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Username already exists"));
+        }
+
+        User user = User.builder()
+            .username(request.getUsername())
+            .pwd(passwordEncoder.encode(request.getPassword()))
+            .phone(phoneNumberToSave)
+            .role(Role.ADMIN) // Toujours ADMIN pour cet endpoint
+            .imageData(User.DEFAULT_IMAGE_DATA)
+            .build();
+
+        User savedUser = userRepository.save(user);
+
+        String token = jwtUtil.generateToken(savedUser);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Admin created successfully",
+            "userId", savedUser.getId(),
+            "username", savedUser.getUsername(),
+            "role", savedUser.getRole().name(),
+            "token", token
+        ));
     }
 
     @PostMapping("/login")
@@ -177,9 +237,9 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Invalid phone or password"));
         }
 
-        String token = jwtUtil.generateToken(user.getUsername());
+        String token = jwtUtil.generateToken(user);
 
-        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), user.getPhone(), "Login successful"));
+        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), user.getPhone(), user.getRole().name(), "Login successful"));
     }
 
     @PostMapping("/logout")
@@ -207,7 +267,7 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("User not found"));
         }
 
-        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), user.getPhone(), "User found"));
+        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), user.getPhone(), user.getRole().name(), "User found"));
     }
 }
 

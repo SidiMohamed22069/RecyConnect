@@ -1,11 +1,13 @@
 package com.project.RecyConnect.Controller;
 
 import com.project.RecyConnect.DTO.ProductDTO;
+import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Service.ProductService;
 import com.project.RecyConnect.Service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +70,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductDTO> update(@PathVariable Long id, @RequestBody ProductDTO dto) {
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody ProductDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -78,8 +80,13 @@ public class ProductController {
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!existing.getUserId().equals(currentUser.getId()) || currentUser.getRole() != Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // VÉRIFICATION: Seul ADMIN ou propriétaire peut modifier
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = existing.getUserId().equals(currentUser.getId());
+        
+        if (!isAdmin && !isOwner) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", "You can only update your own products"));
         }
         try {
             return ResponseEntity.ok(service.update(id, dto));
@@ -89,7 +96,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<ProductDTO> patch(@PathVariable Long id, @RequestBody ProductDTO dto) {
+    public ResponseEntity<?> patch(@PathVariable Long id, @RequestBody ProductDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -99,8 +106,13 @@ public class ProductController {
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!existing.getUserId().equals(currentUser.getId()) || currentUser.getRole() != Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // VÉRIFICATION: Seul ADMIN ou propriétaire peut modifier
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = existing.getUserId().equals(currentUser.getId());
+        
+        if (!isAdmin && !isOwner) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", "You can only update your own products"));
         }
         try {
             return ResponseEntity.ok(service.patch(id, dto));
@@ -134,7 +146,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -144,10 +156,34 @@ public class ProductController {
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!existing.getUserId().equals(currentUser.getId()) || currentUser.getRole() != Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        // VÉRIFICATION: Seul ADMIN ou propriétaire peut supprimer
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isOwner = existing.getUserId().equals(currentUser.getId());
+        
+        if (!isAdmin && !isOwner) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", "You can only delete your own products"));
         }
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Endpoint admin pour modifier n'importe quel produit
+     */
+    @PutMapping("/admin/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> adminUpdateProduct(@PathVariable Long id, @RequestBody ProductDTO dto) {
+        ProductDTO existing = service.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        try {
+            // Admin peut tout modifier, y compris changer le propriétaire
+            return ResponseEntity.ok(service.update(id, dto));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
