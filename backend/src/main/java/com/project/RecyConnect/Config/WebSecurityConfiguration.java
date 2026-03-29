@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -18,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfiguration {
 
     private final JwtRequestFilter authFilter;
@@ -35,6 +37,9 @@ public class WebSecurityConfiguration {
                 // Permettre l'accès public aux endpoints d'authentification
                 .requestMatchers("/api/auth/**", "/ws/**", "/error", "/favicon.ico")
                 .permitAll()
+                // Endpoints admin uniquement
+                .requestMatchers("/api/auth/register-admin").hasRole("ADMIN")
+                .requestMatchers("/api/products/admin/**").hasRole("ADMIN")
                 // Permettre l'accès public uniquement aux GET (lecture)
                 .requestMatchers(HttpMethod.GET, 
                                 "/api/categories/**", 

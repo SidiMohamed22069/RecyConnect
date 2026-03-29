@@ -16,9 +16,18 @@ import java.util.function.Function;
 public class JwtUtil {
     private static final String SECRET = "5367566859703373367639792F423F4528482840625165546857605A71347437536756685970337336763979hgchggfghjrtyu";
     private Set<String> invalidatedTokens = new HashSet<>();
+    
     public String generateToken(String userName) {
         Map<String, Object> claims = new HashMap<>();
         return createToken(claims, userName);
+    }
+
+    public String generateToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("username", user.getUsername());
+        claims.put("role", user.getRole().name());
+        return createToken(claims, user.getUsername());
     }
 
     private String createToken(Map<String, Object> claims, String userName) {
@@ -71,5 +80,10 @@ public class JwtUtil {
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractEmail(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = extractAllClaims(token);
+        return (String) claims.get("role");
     }
 }
