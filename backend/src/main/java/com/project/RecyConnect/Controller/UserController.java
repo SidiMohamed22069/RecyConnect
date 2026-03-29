@@ -2,10 +2,13 @@ package com.project.RecyConnect.Controller;
 
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
+import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -71,9 +74,36 @@ public class UserController {
         service.updateFcmToken(id, dto.getToken());
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * Changer le rôle d'un utilisateur (réservé aux admins)
+     */
+    @PutMapping("/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody RoleUpdateDTO dto) {
+        try {
+            Role newRole = Role.valueOf(dto.getRole().toUpperCase());
+            UserDTO updatedUser = service.updateRole(id, newRole);
+            return ResponseEntity.ok(Map.of(
+                "message", "Role updated successfully",
+                "userId", updatedUser.getId(),
+                "username", updatedUser.getUsername(),
+                "role", newRole.name()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid role. Use USER or ADMIN"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
     
     @lombok.Data
     public static class FcmTokenDTO {
         private String token;
+    }
+
+    @lombok.Data
+    public static class RoleUpdateDTO {
+        private String role;
     }
 }
