@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Product;
+import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Repository.ProductRepository;
 import com.project.RecyConnect.Repository.UserRepo;
@@ -143,6 +144,20 @@ public class UserService implements UserDetailsService {
             user.setFcmToken(fcmToken);
             userRepository.save(user);
         });
+    }
+
+    /**
+     * Met à jour le rôle d'un utilisateur
+     * @param userId L'ID de l'utilisateur
+     * @param role Le nouveau rôle (USER ou ADMIN)
+     * @return L'utilisateur mis à jour
+     */
+    public UserDTO updateRole(Long userId, Role role) {
+        return userRepository.findById(userId).map(user -> {
+            user.setRole(role);
+            User saved = userRepository.save(user);
+            return toDTO(saved);
+        }).orElseThrow(() -> new RuntimeException("User not found"));
     }
     
     /**

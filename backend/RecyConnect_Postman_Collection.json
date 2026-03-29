@@ -708,6 +708,42 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Update User Role (Admin only)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role\": \"ADMIN\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1/role",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1",
+								"role"
+							],
+							"description": "Change le rôle d'un utilisateur (USER ou ADMIN). Réservé aux admins."
+						}
+					},
+					"response": []
 				}
 			]
 		},
