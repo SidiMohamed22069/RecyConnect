@@ -6,6 +6,8 @@ import com.project.RecyConnect.Repository.UserRepo;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -71,6 +73,14 @@ public class FCMService {
                     .setTitle(notificationDTO.getTitle())
                     .setBody(notificationDTO.getMessage())
                     .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setPriority(AndroidConfig.Priority.HIGH)
+                    .setNotification(AndroidNotification.builder()
+                        .setChannelId("recyconnect_high_importance")
+                        .setPriority(AndroidNotification.Priority.MAX)
+                        .setSound("default")
+                        .build())
+                    .build())
                 .putData("type", notificationDTO.getType() != null ? notificationDTO.getType() : "")
                 .putData("relatedId", notificationDTO.getRelatedId() != null ? notificationDTO.getRelatedId().toString() : "")
                 .putData("notificationId", notificationDTO.getId() != null ? notificationDTO.getId().toString() : "")
@@ -101,6 +111,14 @@ public class FCMService {
                 .setNotification(Notification.builder()
                     .setTitle(title)
                     .setBody(message)
+                    .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setPriority(AndroidConfig.Priority.HIGH)
+                    .setNotification(AndroidNotification.builder()
+                        .setChannelId("recyconnect_high_importance")
+                        .setPriority(AndroidNotification.Priority.MAX)
+                        .setSound("default")
+                        .build())
                     .build())
                 .putData("type", "BROADCAST")
                 .build();
