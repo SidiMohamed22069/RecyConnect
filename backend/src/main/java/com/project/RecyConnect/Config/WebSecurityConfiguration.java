@@ -37,6 +37,9 @@ public class WebSecurityConfiguration {
                 // Permettre l'accès public aux endpoints d'authentification
                 .requestMatchers("/api/auth/**", "/ws/**", "/error", "/favicon.ico")
                 .permitAll()
+                // Endpoints de test FCM (pour debug)
+                .requestMatchers("/api/admin/notifications/fcm-status", "/api/admin/notifications/test-fcm/**")
+                .permitAll()
                 // Endpoints admin uniquement
                 .requestMatchers("/api/auth/register-admin").hasRole("ADMIN")
                 .requestMatchers("/api/products/admin/**").hasRole("ADMIN")

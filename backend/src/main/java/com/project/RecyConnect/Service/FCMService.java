@@ -79,6 +79,9 @@ public class FCMService {
                         .setChannelId("recyconnect_high_importance")
                         .setPriority(AndroidNotification.Priority.MAX)
                         .setSound("default")
+                        .setDefaultVibrateTimings(true)
+                        .setDefaultLightSettings(true)
+                        .setVisibility(AndroidNotification.Visibility.PUBLIC)
                         .build())
                     .build())
                 .putData("type", notificationDTO.getType() != null ? notificationDTO.getType() : "")
@@ -118,6 +121,9 @@ public class FCMService {
                         .setChannelId("recyconnect_high_importance")
                         .setPriority(AndroidNotification.Priority.MAX)
                         .setSound("default")
+                        .setDefaultVibrateTimings(true)
+                        .setDefaultLightSettings(true)
+                        .setVisibility(AndroidNotification.Visibility.PUBLIC)
                         .build())
                     .build())
                 .putData("type", "BROADCAST")
@@ -129,6 +135,76 @@ public class FCMService {
         } catch (Exception e) {
             System.err.println("Erreur inattendue lors de l'envoi broadcast: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Teste la connexion FCM et envoie une notification de test à un utilisateur
+     * @return Message de résultat du test
+     */
+    public String testFcmConnection(Long userId) {
+        // Vérifier si Firebase est initialisé
+        if (FirebaseApp.getApps().isEmpty()) {
+            return "ERREUR: Firebase n'est pas initialisé. Vérifiez le fichier service-account-key.json";
+        }
+        
+        User user = userRepo.findById(userId).orElse(null);
+        if (user == null) {
+            return "ERREUR: Utilisateur avec ID " + userId + " non trouvé";
+        }
+        
+        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
+            return "ERREUR: L'utilisateur " + user.getUsername() + " n'a pas de token FCM enregistré. " +
+                   "L'app mobile doit d'abord enregistrer son token via POST /api/users/" + userId + "/fcm-token";
+        }
+        
+        try {
+            Message message = Message.builder()
+                .setToken(user.getFcmToken())
+                .setNotification(Notification.builder()
+                    .setTitle("🧪 Test FCM RecyConnect")
+                    .setBody("Si vous voyez cette notification, FCM fonctionne correctement!")
+                    .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                    .setPriority(AndroidConfig.Priority.HIGH)
+                    .setNotification(AndroidNotification.builder()
+                        .setChannelId("recyconnect_high_importance")
+                        .setPriority(AndroidNotification.Priority.MAX)
+                        .setSound("default")
+                        .setDefaultVibrateTimings(true)
+                        .setDefaultLightSettings(true)
+                        .setVisibility(AndroidNotification.Visibility.PUBLIC)
+                        .build())
+                    .build())
+                .putData("type", "TEST")
+                .putData("timestamp", String.valueOf(System.currentTimeMillis()))
+                .build();
+            
+            String messageId = FirebaseMessaging.getInstance().send(message);
+            return "SUCCÈS: Notification envoyée! Message ID: " + messageId + 
+                   " | Utilisateur: " + user.getUsername() + 
+                   " | Token: " + user.getFcmToken().substring(0, Math.min(20, user.getFcmToken().length())) + "...";
+        } catch (FirebaseMessagingException e) {
+            return "ERREUR FCM: " + e.getMessage() + " | Code: " + e.getMessagingErrorCode();
+        } catch (Exception e) {
+            return "ERREUR: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * Vérifie le statut de la configuration FCM
+     */
+    public String getFcmStatus() {
+        StringBuilder status = new StringBuilder();
+        status.append("=== Statut FCM ===\n");
+        status.append("Firebase initialisé: ").append(!FirebaseApp.getApps().isEmpty()).append("\n");
+        status.append("Service Account Key: ").append(serviceAccountKeyPath).append("\n");
+        status.append("Project ID: ").append(projectId).append("\n");
+        
+        if (!FirebaseApp.getApps().isEmpty()) {
+            status.append("Firebase App Name: ").append(FirebaseApp.getInstance().getName()).append("\n");
+        }
+        
+        return status.toString();
     }
 }
 
