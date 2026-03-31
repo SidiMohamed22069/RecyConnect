@@ -2118,6 +2118,174 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "FCM Test",
+			"description": "Endpoints pour tester les notifications push Firebase Cloud Messaging",
+			"item": [
+				{
+					"name": "1. FCM Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/fcm-test/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fcm-test",
+								"status"
+							]
+						},
+						"description": "Vérifie si Firebase est initialisé et prêt à envoyer des notifications"
+					},
+					"response": []
+				},
+				{
+					"name": "2. List Users with FCM Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/fcm-test/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fcm-test",
+								"users"
+							]
+						},
+						"description": "Liste tous les utilisateurs avec leur statut de token FCM (hasFcmToken: true/false)"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Register FCM Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fcmToken\": \"COLLER_LE_TOKEN_FCM_DE_L_APP_MOBILE_ICI\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/fcm-test/register-token/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fcm-test",
+								"register-token",
+								"1"
+							]
+						},
+						"description": "Enregistre ou met à jour le token FCM pour un utilisateur. Le token FCM est obtenu depuis l'app mobile via FirebaseMessaging.instance.getToken()"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Send Test Notification to User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"🔔 Test Notification\",\n    \"message\": \"Ceci est une notification de test envoyée depuis Postman!\",\n    \"type\": \"TEST\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/fcm-test/send/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fcm-test",
+								"send",
+								"1"
+							]
+						},
+						"description": "Envoie une notification push à un utilisateur. L'utilisateur doit avoir un token FCM enregistré. Le body est optionnel (valeurs par défaut si vide)."
+					},
+					"response": []
+				},
+				{
+					"name": "5. Send Direct Notification (with token)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fcmToken\": \"COLLER_LE_TOKEN_FCM_ICI\",\n    \"title\": \"🚀 Notification Directe\",\n    \"message\": \"Envoyée directement via le token FCM\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/fcm-test/send-direct",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fcm-test",
+								"send-direct"
+							]
+						},
+						"description": "Envoie une notification directement à un appareil via son token FCM, sans passer par un utilisateur en base"
+					},
+					"response": []
+				},
+				{
+					"name": "6. Validate FCM Token (Dry Run)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fcmToken\": \"COLLER_LE_TOKEN_A_VALIDER_ICI\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/fcm-test/validate-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"fcm-test",
+								"validate-token"
+							]
+						},
+						"description": "Valide un token FCM sans envoyer de notification (dry-run). Retourne si le token est valide, expiré, ou appartient à un autre projet."
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }

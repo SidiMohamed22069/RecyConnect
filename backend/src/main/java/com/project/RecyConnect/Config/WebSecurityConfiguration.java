@@ -40,6 +40,9 @@ public class WebSecurityConfiguration {
                 // Endpoints de test FCM (pour debug)
                 .requestMatchers("/api/admin/notifications/fcm-status", "/api/admin/notifications/test-fcm/**")
                 .permitAll()
+                // Endpoints FCM test complets
+                .requestMatchers("/api/fcm-test/**")
+                .permitAll()
                 // Endpoints admin uniquement
                 .requestMatchers("/api/auth/register-admin").hasRole("ADMIN")
                 .requestMatchers("/api/products/admin/**").hasRole("ADMIN")
