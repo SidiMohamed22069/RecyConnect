@@ -3,6 +3,8 @@ package com.project.RecyConnect.Controller;
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Role;
+import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Security.JwtUtil;
 import com.project.RecyConnect.Service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,7 +18,12 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService service;
-    public UserController(UserService service) { this.service = service; }
+    private final JwtUtil jwtUtil;
+    
+    public UserController(UserService service, JwtUtil jwtUtil) {
+        this.service = service;
+        this.jwtUtil = jwtUtil;
+    }
 
     @GetMapping
     public List<UserDTO> getAll() { return service.findAll(); }
@@ -41,9 +48,25 @@ public class UserController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<UserDTO> patch(@PathVariable Long id, @RequestBody UserDTO dto) {
+    public ResponseEntity<?> patch(@PathVariable Long id, @RequestBody UserDTO dto) {
         try {
-            return ResponseEntity.ok(service.patch(id, dto));
+            User updatedUser = service.patchAndGetUser(id, dto);
+            
+            // Générer un nouveau token avec les nouvelles données
+            String newToken = jwtUtil.generateToken(updatedUser);
+            
+            // Construire le DTO pour la réponse
+            UserDTO userDTO = new UserDTO();
+            userDTO.setId(updatedUser.getId());
+            userDTO.setUsername(updatedUser.getUsername());
+            userDTO.setPhone(updatedUser.getPhone());
+            userDTO.setImageData(updatedUser.getImageData());
+            userDTO.setRole(updatedUser.getRole());
+            
+            return ResponseEntity.ok(Map.of(
+                "user", userDTO,
+                "token", newToken
+            ));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
