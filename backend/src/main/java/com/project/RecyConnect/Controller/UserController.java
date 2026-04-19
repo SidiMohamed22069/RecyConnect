@@ -1,11 +1,13 @@
 package com.project.RecyConnect.Controller;
 
 import com.project.RecyConnect.DTO.UserDTO;
+import com.project.RecyConnect.DTO.UserDeviceDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Security.JwtUtil;
 import com.project.RecyConnect.Service.UserService;
+import com.project.RecyConnect.Service.UserDeviceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,10 +21,12 @@ public class UserController {
 
     private final UserService service;
     private final JwtUtil jwtUtil;
+    private final UserDeviceService userDeviceService;
     
-    public UserController(UserService service, JwtUtil jwtUtil) {
+    public UserController(UserService service, JwtUtil jwtUtil, UserDeviceService userDeviceService) {
         this.service = service;
         this.jwtUtil = jwtUtil;
+        this.userDeviceService = userDeviceService;
     }
 
     @GetMapping
@@ -99,6 +103,57 @@ public class UserController {
     }
 
     /**
+     * Enregistrer un nouvel appareil pour un utilisateur
+     */
+    @PostMapping("/{id}/devices")
+    public ResponseEntity<UserDeviceDTO> registerDevice(@PathVariable Long id, @RequestBody DeviceRegistrationDTO dto) {
+        UserDeviceDTO device = userDeviceService.registerDevice(
+            id, 
+            dto.getFcmToken(), 
+            dto.getDeviceName(), 
+            dto.getDeviceType()
+        );
+        return ResponseEntity.ok(device);
+    }
+
+    /**
+     * Récupérer tous les appareils d'un utilisateur
+     */
+    @GetMapping("/{id}/devices")
+    public ResponseEntity<List<UserDeviceDTO>> getUserDevices(@PathVariable Long id) {
+        List<UserDeviceDTO> devices = userDeviceService.getUserDevices(id);
+        return ResponseEntity.ok(devices);
+    }
+
+    /**
+     * Récupérer le dernier appareil connecté d'un utilisateur
+     */
+    @GetMapping("/{id}/devices/last")
+    public ResponseEntity<UserDeviceDTO> getLastConnectedDevice(@PathVariable Long id) {
+        return userDeviceService.getLastConnectedDevice(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Supprimer un appareil par son token FCM
+     */
+    @DeleteMapping("/{id}/devices")
+    public ResponseEntity<Void> removeDevice(@PathVariable Long id, @RequestBody FcmTokenDTO dto) {
+        userDeviceService.removeDevice(dto.getToken());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Supprimer tous les appareils d'un utilisateur (déconnexion de tous les appareils)
+     */
+    @DeleteMapping("/{id}/devices/all")
+    public ResponseEntity<Void> removeAllDevices(@PathVariable Long id) {
+        userDeviceService.removeAllUserDevices(id);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * Changer le rôle d'un utilisateur (réservé aux admins)
      */
     @PutMapping("/{id}/role")
@@ -128,5 +183,12 @@ public class UserController {
     @lombok.Data
     public static class RoleUpdateDTO {
         private String role;
+    }
+    
+    @lombok.Data
+    public static class DeviceRegistrationDTO {
+        private String fcmToken;
+        private String deviceName;
+        private String deviceType;  // "ANDROID", "IOS", "WEB"
     }
 }
