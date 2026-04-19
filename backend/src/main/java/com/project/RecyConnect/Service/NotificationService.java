@@ -82,7 +82,25 @@ public class NotificationService {
         if (dto.getCreatedAt() == null || dto.getId() == null) {
             dto.setCreatedAt(OffsetDateTime.now());
         }
-        return toDTO(repo.save(fromDTO(dto)));
+        
+        // Sauvegarder en DB
+        Notification saved = repo.save(fromDTO(dto));
+        NotificationDTO savedDTO = toDTO(saved);
+        
+        // Envoyer en temps réel si receiverId est défini
+        if (dto.getReceiverId() != null) {
+            boolean isOnline = sessionManager.isUserConnected(dto.getReceiverId());
+            
+            if (isOnline) {
+                // User en ligne → WebSocket (instantané)
+                webSocketService.sendToUser(dto.getReceiverId(), savedDTO);
+            } else {
+                // User hors ligne → FCM (notification push)
+                fcmService.sendPushNotification(dto.getReceiverId(), savedDTO);
+            }
+        }
+        
+        return savedDTO;
     }
 
     public NotificationDTO update(Long id, NotificationDTO dto) {
