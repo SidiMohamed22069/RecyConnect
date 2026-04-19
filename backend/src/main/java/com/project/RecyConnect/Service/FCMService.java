@@ -2,7 +2,9 @@ package com.project.RecyConnect.Service;
 
 import com.project.RecyConnect.DTO.NotificationDTO;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Model.UserDevice;
 import com.project.RecyConnect.Repository.UserRepo;
+import com.project.RecyConnect.Repository.UserDeviceRepository;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -30,9 +32,11 @@ public class FCMService {
     private String projectId;
     
     private final UserRepo userRepo;
+    private final UserDeviceRepository deviceRepository;
     
-    public FCMService(UserRepo userRepo) {
+    public FCMService(UserRepo userRepo, UserDeviceRepository deviceRepository) {
         this.userRepo = userRepo;
+        this.deviceRepository = deviceRepository;
     }
     
     @PostConstruct
@@ -58,17 +62,34 @@ public class FCMService {
     }
     
     /**
-     * Envoie une notification push à un utilisateur spécifique
+     * Envoie une notification push à TOUS les appareils d'un utilisateur
      */
     public void sendPushNotification(Long userId, NotificationDTO notificationDTO) {
-        User user = userRepo.findById(userId).orElse(null);
-        if (user == null || user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
-            return; // Pas de token FCM, on ne peut pas envoyer
+        // Récupérer tous les appareils de l'utilisateur
+        List<UserDevice> devices = deviceRepository.findByUserId(userId);
+        
+        if (devices.isEmpty()) {
+            // Fallback: vérifier l'ancien champ fcmToken sur User (rétrocompatibilité)
+            User user = userRepo.findById(userId).orElse(null);
+            if (user != null && user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+                sendToToken(user.getFcmToken(), notificationDTO);
+            }
+            return;
         }
         
+        // Envoyer à chaque appareil
+        for (UserDevice device : devices) {
+            sendToToken(device.getFcmToken(), notificationDTO);
+        }
+    }
+    
+    /**
+     * Envoie une notification à un token FCM spécifique
+     */
+    private void sendToToken(String fcmToken, NotificationDTO notificationDTO) {
         try {
             Message message = Message.builder()
-                .setToken(user.getFcmToken())
+                .setToken(fcmToken)
                 .setNotification(Notification.builder()
                     .setTitle(notificationDTO.getTitle())
                     .setBody(notificationDTO.getMessage())
@@ -92,12 +113,11 @@ public class FCMService {
             FirebaseMessaging.getInstance().send(message);
         } catch (FirebaseMessagingException e) {
             System.err.println("Erreur lors de l'envoi de la notification FCM: " + e.getMessage());
-            // Si le token est invalide, on peut le supprimer
+            // Si le token est invalide, le supprimer de la table UserDevice
             if (e.getMessagingErrorCode() != null && 
                 (e.getMessagingErrorCode().equals("INVALID_ARGUMENT") || 
                  e.getMessagingErrorCode().equals("UNREGISTERED"))) {
-                user.setFcmToken(null);
-                userRepo.save(user);
+                deviceRepository.deleteByFcmToken(fcmToken);
             }
         } catch (Exception e) {
             System.err.println("Erreur inattendue lors de l'envoi FCM: " + e.getMessage());
