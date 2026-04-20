@@ -88,13 +88,14 @@ public class PendingLoginService {
         notification.setRelatedId(pending.getId());
         notification.setCreatedAt(OffsetDateTime.now());
 
-        // Envoyer via WebSocket si en ligne
+        // Envoyer via WebSocket si en ligne, sinon via FCM
         if (sessionManager.isUserConnected(user.getId())) {
+            // User en ligne -> WebSocket uniquement
             webSocketService.sendToUser(user.getId(), notification);
+        } else {
+            // User hors ligne -> FCM push notification
+            fcmService.sendPushNotification(user.getId(), notification);
         }
-        
-        // Envoyer aussi via FCM (push notification)
-        fcmService.sendPushNotification(user.getId(), notification);
     }
 
     /**
