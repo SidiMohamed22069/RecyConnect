@@ -85,26 +85,19 @@ public class FCMService {
     
     /**
      * Envoie une notification à un token FCM spécifique
+     * Envoie uniquement des DATA (pas de notification) pour éviter les doublons
+     * C'est l'app Flutter qui crée la notification locale
      */
     private void sendToToken(String fcmToken, NotificationDTO notificationDTO) {
         try {
             Message message = Message.builder()
                 .setToken(fcmToken)
-                .setNotification(Notification.builder()
-                    .setTitle(notificationDTO.getTitle())
-                    .setBody(notificationDTO.getMessage())
-                    .build())
+                // PAS de .setNotification() pour éviter le doublon avec Flutter
                 .setAndroidConfig(AndroidConfig.builder()
                     .setPriority(AndroidConfig.Priority.HIGH)
-                    .setNotification(AndroidNotification.builder()
-                        .setChannelId("recyconnect_high_importance")
-                        .setPriority(AndroidNotification.Priority.MAX)
-                        .setSound("default")
-                        .setDefaultVibrateTimings(true)
-                        .setDefaultLightSettings(true)
-                        .setVisibility(AndroidNotification.Visibility.PUBLIC)
-                        .build())
                     .build())
+                .putData("title", notificationDTO.getTitle() != null ? notificationDTO.getTitle() : "")
+                .putData("body", notificationDTO.getMessage() != null ? notificationDTO.getMessage() : "")
                 .putData("type", notificationDTO.getType() != null ? notificationDTO.getType() : "")
                 .putData("relatedId", notificationDTO.getRelatedId() != null ? notificationDTO.getRelatedId().toString() : "")
                 .putData("notificationId", notificationDTO.getId() != null ? notificationDTO.getId().toString() : "")
