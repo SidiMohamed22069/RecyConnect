@@ -1,5 +1,8 @@
 package com.project.RecyConnect.Controller;
 
+import java.util.Map;
+import java.util.Optional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,9 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
-import java.util.Optional;
 
 import com.project.RecyConnect.DTO.AuthDTO;
 import com.project.RecyConnect.DTO.UserDeviceDTO;
@@ -258,7 +258,21 @@ public class AuthController {
 
         // Vérifier si un appareil est déjà connecté
         if (pendingLoginService.hasExistingDevice(user.getId())) {
-            // Un appareil existe déjà -> demander confirmation
+            // Si c'est le même appareil (même FCM token) -> connexion directe sans confirmation
+            if (userDeviceService.isDeviceAlreadyRegistered(user.getId(), request.getFcmToken())) {
+                userDeviceService.updateLastConnected(request.getFcmToken());
+                String token = jwtUtil.generateToken(user);
+                return ResponseEntity.ok(new AuthDTO.AuthResponse(
+                    token,
+                    user.getId(),
+                    user.getUsername(),
+                    user.getPhone(),
+                    user.getRole().name(),
+                    "Login successful"
+                ));
+            }
+
+            // Appareil différent -> demander confirmation
             Optional<UserDeviceDTO> existingDevice = userDeviceService.getLastConnectedDevice(user.getId());
             String existingDeviceName = existingDevice.map(UserDeviceDTO::getDeviceName).orElse("Appareil inconnu");
             

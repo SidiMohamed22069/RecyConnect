@@ -141,6 +141,16 @@ public class UserDeviceService {
     }
 
     /**
+     * Vérifie si un FCM token appartient déjà à un appareil enregistré pour cet utilisateur
+     */
+    public boolean isDeviceAlreadyRegistered(Long userId, String fcmToken) {
+        if (fcmToken == null || fcmToken.isEmpty()) return false;
+        return deviceRepository.findByFcmToken(fcmToken)
+                .map(device -> device.getUser().getId().equals(userId))
+                .orElse(false);
+    }
+
+    /**
      * Invalide un token (le supprime)
      */
     @Transactional
