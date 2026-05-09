@@ -107,7 +107,7 @@ public class FCMTestController {
         if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
             result.put("success", false);
             result.put("error", "Cet utilisateur n'a pas de token FCM enregistré");
-            result.put("solution", "L'app mobile doit appeler POST /api/users/" + userId + "/fcm-token avec le token Firebase");
+            result.put("solution", "L'app mobile doit ouvrir une session active avec deviceId et fcmToken via /api/auth/login ou /api/auth/register");
             return ResponseEntity.badRequest().body(result);
         }
         

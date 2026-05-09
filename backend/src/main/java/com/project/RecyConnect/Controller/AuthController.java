@@ -1,7 +1,7 @@
 package com.project.RecyConnect.Controller;
 
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +11,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -19,16 +18,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.project.RecyConnect.DTO.AuthDTO;
-import com.project.RecyConnect.DTO.UserDeviceDTO;
-import com.project.RecyConnect.Model.PendingLogin;
-import com.project.RecyConnect.Model.PendingLogin.PendingLoginStatus;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Model.UserSession;
 import com.project.RecyConnect.Repository.UserRepo;
 import com.project.RecyConnect.Security.JwtUtil;
-import com.project.RecyConnect.Service.PendingLoginService;
+import com.project.RecyConnect.Service.FCMService;
 import com.project.RecyConnect.Service.PhoneVerificationService;
-import com.project.RecyConnect.Service.UserDeviceService;
+import com.project.RecyConnect.Service.UserSessionService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,8 +39,8 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final PhoneVerificationService phoneVerificationService;
-    private final UserDeviceService userDeviceService;
-    private final PendingLoginService pendingLoginService;
+    private final UserSessionService userSessionService;
+    private final FCMService fcmService;
 
     /**
      * Étape 1: Envoyer un code de vérification au numéro de téléphone
@@ -163,18 +160,32 @@ public class AuthController {
         // Nettoyer les codes de vérification expirés (avec le numéro sans préfixe 222)
         phoneVerificationService.cleanupExpiredCodes(phoneNumberToSave);
 
-        // Enregistrer l'appareil si les infos sont fournies
-        if (request.getFcmToken() != null && !request.getFcmToken().isEmpty()) {
-            userDeviceService.registerDevice(
-                savedUser.getId(),
-                request.getFcmToken(),
-                request.getDeviceName(),
-                request.getDeviceType()
-            );
-        }
+        String token;
 
-        // Generate token with user role
-        String token = jwtUtil.generateToken(savedUser);
+        // Appliquer la session unique si les infos appareil sont fournies
+        if (request.getFcmToken() != null && !request.getFcmToken().isEmpty()) {
+            if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new AuthDTO.AuthResponse("deviceId is required when fcmToken is provided"));
+            }
+
+            UserSessionService.SessionReplacementResult sessionResult = userSessionService.replaceSession(
+                savedUser.getId(),
+                request.getDeviceId(),
+                request.getDeviceName(),
+                request.getFcmToken()
+            );
+
+            UserSession session = sessionResult.session();
+            token = jwtUtil.generateToken(savedUser, session.getSessionVersion(), session.getDeviceId());
+
+            String previousFcmToken = sessionResult.previousFcmToken();
+            if (previousFcmToken != null && !Objects.equals(previousFcmToken, request.getFcmToken())) {
+                fcmService.sendForceLogoutToToken(previousFcmToken, "session_replaced");
+            }
+        } else {
+            token = jwtUtil.generateToken(savedUser);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new AuthDTO.AuthResponse(token, savedUser.getId(), savedUser.getUsername(), savedUser.getPhone(), savedUser.getRole().name(), "Registration successful"));
@@ -233,6 +244,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthDTO.LoginRequest request) {
+        if (request.getDeviceId() == null || request.getDeviceId().isBlank()
+                || request.getFcmToken() == null || request.getFcmToken().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("deviceId and fcmToken are required"));
+        }
+
         // Enlever le préfixe 222 si présent
         Long phoneToSearch = request.getPhone();
         String phoneStr = String.valueOf(request.getPhone());
@@ -256,50 +273,20 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Invalid phone or password"));
         }
 
-        // Vérifier si un appareil est déjà connecté
-        if (pendingLoginService.hasExistingDevice(user.getId())) {
-            // Si c'est le même appareil (même FCM token) -> connexion directe sans confirmation
-            if (userDeviceService.isDeviceAlreadyRegistered(user.getId(), request.getFcmToken())) {
-                userDeviceService.updateLastConnected(request.getFcmToken());
-                String token = jwtUtil.generateToken(user);
-                return ResponseEntity.ok(new AuthDTO.AuthResponse(
-                    token,
-                    user.getId(),
-                    user.getUsername(),
-                    user.getPhone(),
-                    user.getRole().name(),
-                    "Login successful"
-                ));
-            }
-
-            // Appareil différent -> demander confirmation
-            Optional<UserDeviceDTO> existingDevice = userDeviceService.getLastConnectedDevice(user.getId());
-            String existingDeviceName = existingDevice.map(UserDeviceDTO::getDeviceName).orElse("Appareil inconnu");
-            
-            // Créer une demande de connexion en attente
-            PendingLogin pending = pendingLoginService.createPendingLogin(
+        UserSessionService.SessionReplacementResult sessionResult = userSessionService.replaceSession(
                 user.getId(),
-                request.getFcmToken(),
+                request.getDeviceId(),
                 request.getDeviceName(),
-                request.getDeviceType()
-            );
-            
-            // Retourner une réponse indiquant qu'on attend la confirmation
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(AuthDTO.AuthResponse.pendingConfirmation(pending.getRequestId(), existingDeviceName));
+                request.getFcmToken()
+        );
+
+        String previousFcmToken = sessionResult.previousFcmToken();
+        if (previousFcmToken != null && !Objects.equals(previousFcmToken, request.getFcmToken())) {
+            fcmService.sendForceLogoutToToken(previousFcmToken, "session_replaced");
         }
 
-        // Pas d'appareil existant -> connexion directe
-        if (request.getFcmToken() != null && !request.getFcmToken().isEmpty()) {
-            userDeviceService.registerDevice(
-                user.getId(),
-                request.getFcmToken(),
-                request.getDeviceName(),
-                request.getDeviceType()
-            );
-        }
-
-        String token = jwtUtil.generateToken(user);
+        UserSession session = sessionResult.session();
+        String token = jwtUtil.generateToken(user, session.getSessionVersion(), session.getDeviceId());
 
         return ResponseEntity.ok(new AuthDTO.AuthResponse(
             token, 
@@ -311,80 +298,23 @@ public class AuthController {
         ));
     }
 
-    /**
-     * Vérifier le statut d'une demande de connexion (polling par le nouvel appareil)
-     */
-    @GetMapping("/login/status/{requestId}")
-    public ResponseEntity<?> checkLoginStatus(@PathVariable String requestId) {
-        Optional<PendingLogin> pending = pendingLoginService.checkStatus(requestId);
-        
-        if (pending.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        
-        PendingLogin login = pending.get();
-        
-        if (login.isExpired() || login.getStatus() == PendingLoginStatus.EXPIRED) {
-            return ResponseEntity.ok(AuthDTO.AuthResponse.expired());
-        }
-        
-        if (login.getStatus() == PendingLoginStatus.REJECTED) {
-            return ResponseEntity.ok(AuthDTO.AuthResponse.rejected());
-        }
-        
-        if (login.getStatus() == PendingLoginStatus.APPROVED) {
-            // Connexion approuvée -> générer le token
-            User user = login.getUser();
-            String token = jwtUtil.generateToken(user);
-            
-            return ResponseEntity.ok(new AuthDTO.AuthResponse(
-                token,
-                user.getId(),
-                user.getUsername(),
-                user.getPhone(),
-                user.getRole().name(),
-                "Login approved"
-            ));
-        }
-        
-        // Toujours en attente
-        AuthDTO.AuthResponse response = new AuthDTO.AuthResponse("En attente de confirmation...");
-        response.setStatus("PENDING_CONFIRMATION");
-        response.setRequestId(requestId);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Approuver ou refuser une demande de connexion (appelé depuis l'ancien appareil)
-     */
-    @PostMapping("/login/confirm")
-    public ResponseEntity<?> confirmLogin(@RequestBody AuthDTO.LoginConfirmRequest request) {
-        try {
-            if (request.getApproved()) {
-                pendingLoginService.approveLogin(request.getRequestId());
-                return ResponseEntity.ok(Map.of(
-                    "message", "Connexion approuvée. Vous serez déconnecté de cet appareil.",
-                    "status", "APPROVED"
-                ));
-            } else {
-                pendingLoginService.rejectLogin(request.getRequestId());
-                return ResponseEntity.ok(Map.of(
-                    "message", "Connexion refusée",
-                    "status", "REJECTED"
-                ));
-            }
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "message", e.getMessage(),
-                "status", "ERROR"
-            ));
-        }
-    }
-
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceIdHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+            try {
+                Long userId = jwtUtil.extractUserId(token);
+                Long sessionVersion = jwtUtil.extractSessionVersion(token);
+                String tokenDeviceId = jwtUtil.extractDeviceId(token);
+
+                if (userId != null && sessionVersion != null && tokenDeviceId != null && tokenDeviceId.equals(deviceIdHeader)) {
+                    userSessionService.revokeIfCurrent(userId, sessionVersion, tokenDeviceId);
+                }
+            } catch (Exception ignored) {
+                // Best effort logout
+            }
             jwtUtil.expireToken(token);
         }
         return ResponseEntity.ok(new AuthDTO.AuthResponse("Logout successful"));

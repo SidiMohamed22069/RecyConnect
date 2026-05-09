@@ -9,13 +9,17 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 @Component
 public class JwtUtil {
     private static final String SECRET = "5367566859703373367639792F423F4528482840625165546857605A71347437536756685970337336763979hgchggfghjrtyu";
-    private Set<String> invalidatedTokens = new HashSet<>();
+    private final Set<String> invalidatedTokens = ConcurrentHashMap.newKeySet();
     
     public String generateToken(String userName) {
         Map<String, Object> claims = new HashMap<>();
@@ -27,6 +31,16 @@ public class JwtUtil {
         claims.put("userId", user.getId());
         claims.put("username", user.getUsername());
         claims.put("role", user.getRole().name());
+        return createToken(claims, user.getUsername());
+    }
+
+    public String generateToken(User user, Long sessionVersion, String deviceId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("username", user.getUsername());
+        claims.put("role", user.getRole().name());
+        claims.put("sessionVersion", sessionVersion);
+        claims.put("deviceId", deviceId);
         return createToken(claims, user.getUsername());
     }
 
@@ -50,6 +64,27 @@ public class JwtUtil {
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public Long extractUserId(String token) {
+        Object raw = extractAllClaims(token).get("userId");
+        if (raw instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    public Long extractSessionVersion(String token) {
+        Object raw = extractAllClaims(token).get("sessionVersion");
+        if (raw instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    public String extractDeviceId(String token) {
+        Object raw = extractAllClaims(token).get("deviceId");
+        return raw == null ? null : raw.toString();
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -79,7 +114,7 @@ public class JwtUtil {
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractEmail(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token) && !invalidatedTokens.contains(token));
     }
 
     public String getRoleFromToken(String token) {
