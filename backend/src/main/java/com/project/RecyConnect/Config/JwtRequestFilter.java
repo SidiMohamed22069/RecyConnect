@@ -1,6 +1,8 @@
 package com.project.RecyConnect.Config;
 
 
+import com.project.RecyConnect.Model.UserSession;
+import com.project.RecyConnect.Repository.UserSessionRepository;
 import com.project.RecyConnect.Security.JwtUtil;
 import com.project.RecyConnect.Service.UserService;
 import jakarta.servlet.FilterChain;
@@ -22,10 +24,12 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserService userDetailsService;
+    private final UserSessionRepository userSessionRepository;
 
-    public JwtRequestFilter(JwtUtil jwtUtil, UserService userDetailsService) {
+    public JwtRequestFilter(JwtUtil jwtUtil, UserService userDetailsService, UserSessionRepository userSessionRepository) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.userSessionRepository = userSessionRepository;
     }
 
     @Override
@@ -41,6 +45,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String user_email = null;
+        String deviceIdHeader = request.getHeader("X-Device-Id");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
             try {
@@ -55,6 +60,30 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             try {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(user_email);
                 if (jwtUtil.validateToken(token, userDetails)) {
+                    Long userId = jwtUtil.extractUserId(token);
+                    Long sessionVersion = jwtUtil.extractSessionVersion(token);
+                    String tokenDeviceId = jwtUtil.extractDeviceId(token);
+
+                    if (userId == null || sessionVersion == null || tokenDeviceId == null || deviceIdHeader == null) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
+                    UserSession activeSession = userSessionRepository.findById(userId).orElse(null);
+                    if (activeSession == null) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
+                    boolean sessionMatches = sessionVersion.equals(activeSession.getSessionVersion())
+                            && tokenDeviceId.equals(activeSession.getDeviceId())
+                            && deviceIdHeader.equals(activeSession.getDeviceId());
+
+                    if (!sessionMatches) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);

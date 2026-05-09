@@ -2,14 +2,16 @@ package com.project.RecyConnect.Service;
 
 import com.project.RecyConnect.DTO.NotificationDTO;
 import com.project.RecyConnect.Model.User;
-import com.project.RecyConnect.Model.UserDevice;
+import com.project.RecyConnect.Model.UserSession;
 import com.project.RecyConnect.Repository.UserRepo;
-import com.project.RecyConnect.Repository.UserDeviceRepository;
+import com.project.RecyConnect.Repository.UserSessionRepository;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -20,7 +22,6 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.List;
 
 @Service
 public class FCMService {
@@ -32,11 +33,11 @@ public class FCMService {
     private String projectId;
     
     private final UserRepo userRepo;
-    private final UserDeviceRepository deviceRepository;
+    private final UserSessionRepository userSessionRepository;
     
-    public FCMService(UserRepo userRepo, UserDeviceRepository deviceRepository) {
+    public FCMService(UserRepo userRepo, UserSessionRepository userSessionRepository) {
         this.userRepo = userRepo;
-        this.deviceRepository = deviceRepository;
+        this.userSessionRepository = userSessionRepository;
     }
     
     @PostConstruct
@@ -62,25 +63,15 @@ public class FCMService {
     }
     
     /**
-     * Envoie une notification push à TOUS les appareils d'un utilisateur
+     * Envoie une notification push au seul appareil actif d'un utilisateur
      */
     public void sendPushNotification(Long userId, NotificationDTO notificationDTO) {
-        // Récupérer tous les appareils de l'utilisateur
-        List<UserDevice> devices = deviceRepository.findByUserId(userId);
-        
-        if (devices.isEmpty()) {
-            // Fallback: vérifier l'ancien champ fcmToken sur User (rétrocompatibilité)
-            User user = userRepo.findById(userId).orElse(null);
-            if (user != null && user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
-                sendToToken(user.getFcmToken(), notificationDTO);
-            }
+        UserSession session = userSessionRepository.findById(userId).orElse(null);
+        if (session == null || session.getFcmToken() == null || session.getFcmToken().isEmpty()) {
             return;
         }
-        
-        // Envoyer à chaque appareil
-        for (UserDevice device : devices) {
-            sendToToken(device.getFcmToken(), notificationDTO);
-        }
+
+        sendToToken(session.getFcmToken(), notificationDTO);
     }
     
     /**
@@ -106,12 +97,7 @@ public class FCMService {
             FirebaseMessaging.getInstance().send(message);
         } catch (FirebaseMessagingException e) {
             System.err.println("Erreur lors de l'envoi de la notification FCM: " + e.getMessage());
-            // Si le token est invalide, le supprimer de la table UserDevice
-            if (e.getMessagingErrorCode() != null && 
-                (e.getMessagingErrorCode().equals("INVALID_ARGUMENT") || 
-                 e.getMessagingErrorCode().equals("UNREGISTERED"))) {
-                deviceRepository.deleteByFcmToken(fcmToken);
-            }
+            // Token invalide: la prochaine connexion régénérera la session.
         } catch (Exception e) {
             System.err.println("Erreur inattendue lors de l'envoi FCM: " + e.getMessage());
         }
@@ -149,6 +135,35 @@ public class FCMService {
             System.err.println("Erreur inattendue lors de l'envoi broadcast: " + e.getMessage());
         }
     }
+
+    /**
+     * Envoie un push de déconnexion forcée à un appareil remplacé.
+     * Mécanisme UX optionnel, la sécurité est assurée côté JWT/session.
+     */
+    public void sendForceLogoutToToken(String fcmToken, String reason) {
+        if (fcmToken == null || fcmToken.isBlank()) {
+            return;
+        }
+
+        try {
+            Message message = Message.builder()
+                    .setToken(fcmToken)
+                    .setAndroidConfig(AndroidConfig.builder()
+                            .setPriority(AndroidConfig.Priority.HIGH)
+                            .build())
+                    .setApnsConfig(ApnsConfig.builder()
+                            .putHeader("apns-priority", "10")
+                            .setAps(Aps.builder().setContentAvailable(true).build())
+                            .build())
+                    .putData("type", "force_logout")
+                    .putData("reason", reason == null ? "session_replaced" : reason)
+                    .build();
+
+            FirebaseMessaging.getInstance().send(message);
+        } catch (Exception e) {
+            // Best effort: ne pas casser la connexion utilisateur si le push échoue.
+        }
+    }
     
     /**
      * Teste la connexion FCM et envoie une notification de test à un utilisateur
@@ -160,19 +175,60 @@ public class FCMService {
             return "ERREUR: Firebase n'est pas initialisé. Vérifiez le fichier service-account-key.json";
         }
         
+        UserSession session = userSessionRepository.findById(userId).orElse(null);
+        if (session == null) {
+            User user = userRepo.findById(userId).orElse(null);
+            if (user == null) {
+                return "ERREUR: Utilisateur avec ID " + userId + " non trouvé";
+            }
+            if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
+                return "ERREUR: L'utilisateur " + user.getUsername() + " n'a pas de session active avec token FCM.";
+            }
+            try {
+                Message message = Message.builder()
+                    .setToken(user.getFcmToken())
+                    .setNotification(Notification.builder()
+                        .setTitle("🧪 Test FCM RecyConnect")
+                        .setBody("Si vous voyez cette notification, FCM fonctionne correctement!")
+                        .build())
+                    .setAndroidConfig(AndroidConfig.builder()
+                        .setPriority(AndroidConfig.Priority.HIGH)
+                        .setNotification(AndroidNotification.builder()
+                            .setChannelId("recyconnect_high_importance")
+                            .setPriority(AndroidNotification.Priority.MAX)
+                            .setSound("default")
+                            .setDefaultVibrateTimings(true)
+                            .setDefaultLightSettings(true)
+                            .setVisibility(AndroidNotification.Visibility.PUBLIC)
+                            .build())
+                        .build())
+                    .putData("type", "TEST")
+                    .putData("timestamp", String.valueOf(System.currentTimeMillis()))
+                    .build();
+            
+                String messageId = FirebaseMessaging.getInstance().send(message);
+                return "SUCCÈS: Notification envoyée! Message ID: " + messageId + 
+                       " | Utilisateur: " + user.getUsername() + 
+                       " | Token: " + user.getFcmToken().substring(0, Math.min(20, user.getFcmToken().length())) + "...";
+            } catch (FirebaseMessagingException e) {
+                return "ERREUR FCM: " + e.getMessage() + " | Code: " + e.getMessagingErrorCode();
+            } catch (Exception e) {
+                return "ERREUR: " + e.getMessage();
+            }
+        }
+
         User user = userRepo.findById(userId).orElse(null);
         if (user == null) {
             return "ERREUR: Utilisateur avec ID " + userId + " non trouvé";
         }
-        
-        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
-            return "ERREUR: L'utilisateur " + user.getUsername() + " n'a pas de token FCM enregistré. " +
-                   "L'app mobile doit d'abord enregistrer son token via POST /api/users/" + userId + "/fcm-token";
+
+        if (session.getFcmToken() == null || session.getFcmToken().isEmpty()) {
+            return "ERREUR: L'utilisateur " + user.getUsername() + " n'a pas de token FCM dans sa session active.";
         }
-        
+
         try {
             Message message = Message.builder()
-                .setToken(user.getFcmToken())
+                .setToken(session.getFcmToken())
                 .setNotification(Notification.builder()
                     .setTitle("🧪 Test FCM RecyConnect")
                     .setBody("Si vous voyez cette notification, FCM fonctionne correctement!")
@@ -191,11 +247,11 @@ public class FCMService {
                 .putData("type", "TEST")
                 .putData("timestamp", String.valueOf(System.currentTimeMillis()))
                 .build();
-            
+        
             String messageId = FirebaseMessaging.getInstance().send(message);
             return "SUCCÈS: Notification envoyée! Message ID: " + messageId + 
-                   " | Utilisateur: " + user.getUsername() + 
-                   " | Token: " + user.getFcmToken().substring(0, Math.min(20, user.getFcmToken().length())) + "...";
+                     " | Utilisateur: " + user.getUsername() + 
+                   " | Token: " + session.getFcmToken().substring(0, Math.min(20, session.getFcmToken().length())) + "...";
         } catch (FirebaseMessagingException e) {
             return "ERREUR FCM: " + e.getMessage() + " | Code: " + e.getMessagingErrorCode();
         } catch (Exception e) {

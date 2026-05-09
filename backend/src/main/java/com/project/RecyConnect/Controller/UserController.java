@@ -1,19 +1,19 @@
 package com.project.RecyConnect.Controller;
 
 import com.project.RecyConnect.DTO.UserDTO;
-import com.project.RecyConnect.DTO.UserDeviceDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Model.UserSession;
 import com.project.RecyConnect.Security.JwtUtil;
 import com.project.RecyConnect.Service.UserService;
-import com.project.RecyConnect.Service.UserDeviceService;
+import com.project.RecyConnect.Service.UserSessionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
@@ -21,12 +21,12 @@ public class UserController {
 
     private final UserService service;
     private final JwtUtil jwtUtil;
-    private final UserDeviceService userDeviceService;
+    private final UserSessionService userSessionService;
     
-    public UserController(UserService service, JwtUtil jwtUtil, UserDeviceService userDeviceService) {
+    public UserController(UserService service, JwtUtil jwtUtil, UserSessionService userSessionService) {
         this.service = service;
         this.jwtUtil = jwtUtil;
-        this.userDeviceService = userDeviceService;
+        this.userSessionService = userSessionService;
     }
 
     @GetMapping
@@ -56,8 +56,15 @@ public class UserController {
         try {
             User updatedUser = service.patchAndGetUser(id, dto);
             
-            // Générer un nouveau token avec les nouvelles données
-            String newToken = jwtUtil.generateToken(updatedUser);
+                // Générer un token cohérent avec la session active (si présente)
+                String newToken;
+                Optional<UserSession> activeSession = userSessionService.findByUserId(updatedUser.getId());
+                if (activeSession.isPresent()) {
+                    UserSession session = activeSession.get();
+                    newToken = jwtUtil.generateToken(updatedUser, session.getSessionVersion(), session.getDeviceId());
+                } else {
+                    newToken = jwtUtil.generateToken(updatedUser);
+                }
             
             // Construire le DTO pour la réponse
             UserDTO userDTO = new UserDTO();
@@ -96,63 +103,6 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
-    @PostMapping("/{id}/fcm-token")
-    public ResponseEntity<Void> updateFcmToken(@PathVariable Long id, @RequestBody FcmTokenDTO dto) {
-        service.updateFcmToken(id, dto.getToken());
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * Enregistrer un nouvel appareil pour un utilisateur
-     */
-    @PostMapping("/{id}/devices")
-    public ResponseEntity<UserDeviceDTO> registerDevice(@PathVariable Long id, @RequestBody DeviceRegistrationDTO dto) {
-        UserDeviceDTO device = userDeviceService.registerDevice(
-            id, 
-            dto.getFcmToken(), 
-            dto.getDeviceName(), 
-            dto.getDeviceType()
-        );
-        return ResponseEntity.ok(device);
-    }
-
-    /**
-     * Récupérer tous les appareils d'un utilisateur
-     */
-    @GetMapping("/{id}/devices")
-    public ResponseEntity<List<UserDeviceDTO>> getUserDevices(@PathVariable Long id) {
-        List<UserDeviceDTO> devices = userDeviceService.getUserDevices(id);
-        return ResponseEntity.ok(devices);
-    }
-
-    /**
-     * Récupérer le dernier appareil connecté d'un utilisateur
-     */
-    @GetMapping("/{id}/devices/last")
-    public ResponseEntity<UserDeviceDTO> getLastConnectedDevice(@PathVariable Long id) {
-        return userDeviceService.getLastConnectedDevice(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    /**
-     * Supprimer un appareil par son token FCM
-     */
-    @DeleteMapping("/{id}/devices")
-    public ResponseEntity<Void> removeDevice(@PathVariable Long id, @RequestBody FcmTokenDTO dto) {
-        userDeviceService.removeDevice(dto.getToken());
-        return ResponseEntity.ok().build();
-    }
-
-    /**
-     * Supprimer tous les appareils d'un utilisateur (déconnexion de tous les appareils)
-     */
-    @DeleteMapping("/{id}/devices/all")
-    public ResponseEntity<Void> removeAllDevices(@PathVariable Long id) {
-        userDeviceService.removeAllUserDevices(id);
-        return ResponseEntity.ok().build();
-    }
-
     /**
      * Changer le rôle d'un utilisateur (réservé aux admins)
      */
@@ -176,19 +126,7 @@ public class UserController {
     }
     
     @lombok.Data
-    public static class FcmTokenDTO {
-        private String token;
-    }
-
-    @lombok.Data
     public static class RoleUpdateDTO {
         private String role;
-    }
-    
-    @lombok.Data
-    public static class DeviceRegistrationDTO {
-        private String fcmToken;
-        private String deviceName;
-        private String deviceType;  // "ANDROID", "IOS", "WEB"
     }
 }
