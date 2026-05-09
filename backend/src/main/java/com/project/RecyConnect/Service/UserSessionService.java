@@ -4,6 +4,8 @@ import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Model.UserSession;
 import com.project.RecyConnect.Repository.UserRepo;
 import com.project.RecyConnect.Repository.UserSessionRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,9 @@ public class UserSessionService {
     private final UserSessionRepository userSessionRepository;
     private final UserRepo userRepo;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     public UserSessionService(UserSessionRepository userSessionRepository, UserRepo userRepo) {
         this.userSessionRepository = userSessionRepository;
         this.userRepo = userRepo;
@@ -25,13 +30,22 @@ public class UserSessionService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        UserSession current = userSessionRepository.findById(userId).orElse(null);
+        UserSession current = entityManager.find(UserSession.class, userId);
 
         Long nextVersion = current == null ? 1L : current.getSessionVersion() + 1L;
         String previousFcmToken = null;
 
         if (current != null && current.getDeviceId() != null && !current.getDeviceId().equals(deviceId)) {
             previousFcmToken = current.getFcmToken();
+        }
+
+        if (current != null) {
+            current.setUser(user);
+            current.setDeviceId(deviceId);
+            current.setDeviceName(deviceName);
+            current.setFcmToken(fcmToken);
+            current.setSessionVersion(nextVersion);
+            return new SessionReplacementResult(current, previousFcmToken);
         }
 
         UserSession next = UserSession.builder()
@@ -41,11 +55,10 @@ public class UserSessionService {
                 .deviceName(deviceName)
                 .fcmToken(fcmToken)
                 .sessionVersion(nextVersion)
-                .createdAt(current == null ? null : current.getCreatedAt())
                 .build();
 
-        UserSession saved = userSessionRepository.save(next);
-        return new SessionReplacementResult(saved, previousFcmToken);
+        entityManager.persist(next);
+        return new SessionReplacementResult(next, previousFcmToken);
     }
 
     public Optional<UserSession> findByUserId(Long userId) {
