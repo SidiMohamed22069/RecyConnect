@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "recyconnect-api-collection",
-		"name": "RecyConnect API",
-		"description": "Collection complète pour tester l'API RecyConnect",
+		"name": "RecyConnect API - Single Device Policy",
+		"description": "Collection mise à jour pour la nouvelle politique: 1 compte = 1 téléphone actif. deviceId + fcmToken obligatoires.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -15,184 +15,193 @@
 			"key": "token",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "deviceId",
+			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string"
+		},
+		{
+			"key": "fcmToken",
+			"value": "cJI8v5vZsyE:APA91bE_test_token_123456",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
 		}
 	],
 	"item": [
 		{
-			"name": "Auth",
-			"description": "Endpoints d'authentification JWT",
+			"name": "🔐 Auth - Single Device Policy",
+			"description": "⚠️ IMPORTANT: Tous les endpoints nécessitent deviceId + fcmToken. 1 compte = 1 appareil actif.",
 			"item": [
 				{
-					"name": "Send Verification Code",
+					"name": "1. Send Verification Code",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"phone\": \"212612345678\"\n}"
+							"raw": "{\n    \"phone\": \"78123456\",\n    \"isForgetPassword\": false\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/auth/send-code",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"send-code"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "send-code"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
-					"name": "Verify Code",
+					"name": "2. Verify Code",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"phone\": \"212612345678\",\n    \"code\": \"123456\"\n}"
+							"raw": "{\n    \"phone\": \"78123456\",\n    \"code\": \"123456\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/auth/verify-code",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"verify-code"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "verify-code"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
-					"name": "Register",
+					"name": "3. Register (avec deviceId + fcmToken)",
 					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate random deviceId (UUID format)",
+									"pm.variables.set('deviceId', 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8); return v.toString(16); }));",
+									"",
+									"// Generate fake FCM token",
+									"pm.variables.set('fcmToken', 'cJI8v5vZsyE:APA91bE_' + Math.random().toString(36).substring(2, 25));"
+								]
+							}
+						},
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.token) {",
-									"    pm.collectionVariables.set('token', jsonData.token);",
+									"if (pm.response.code === 201) {",
+									"  const response = pm.response.json();",
+									"  pm.variables.set('token', response.token);",
+									"  pm.variables.set('userId', response.userId);",
+									"  pm.test('✅ Register successful - Token saved', () => {",
+									"    pm.expect(response.message).to.exist;",
+									"  });",
 									"}"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"password123\",\n    \"phone\": 212612345678,\n    \"verificationCode\": \"123456\"\n}"
+							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"Test@1234\",\n    \"phone\": \"78123456\",\n    \"verificationCode\": \"123456\",\n    \"deviceId\": \"{{deviceId}}\",\n    \"fcmToken\": \"{{fcmToken}}\",\n    \"deviceName\": \"iPhone de Test\",\n    \"deviceType\": \"IOS\",\n    \"role\": \"USER\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/auth/register",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"register"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
-					"name": "Register with Role (ADMIN)",
+					"name": "4. Login (avec deviceId + fcmToken)",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.token) {",
-									"    pm.collectionVariables.set('token', jsonData.token);",
+									"if (pm.response.code === 200) {",
+									"  const response = pm.response.json();",
+									"  pm.variables.set('token', response.token);",
+									"  pm.test('✅ Login successful - sessionVersion incremented', () => {",
+									"    pm.expect(response.message).to.include('Login');",
+									"  });",
 									"}"
-								],
-								"type": "text/javascript"
+								]
 							}
 						}
 					],
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"adminuser\",\n    \"password\": \"admin123\",\n    \"phone\": 212699999999,\n    \"verificationCode\": \"123456\",\n    \"role\": \"ADMIN\"\n}"
+							"raw": "{\n    \"phone\": \"78123456\",\n    \"password\": \"Test@1234\",\n    \"deviceId\": \"{{deviceId}}\",\n    \"fcmToken\": \"{{fcmToken}}\",\n    \"deviceName\": \"iPhone de Test\",\n    \"deviceType\": \"IOS\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/register",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"register"
-							]
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						},
+						"description": "⚠️ Login from different deviceId = old device revoked"
+					}
+				},
+				{
+					"name": "5. Get Current User (Protected)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "me"]
+						},
+						"description": "⚠️ Requires: Bearer token + X-Device-Id header"
+					}
+				},
+				{
+					"name": "6. Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": ["pm.variables.set('token', '');"]
+							}
 						}
-					},
-					"response": []
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "logout"]
+						}
+					}
 				},
 				{
 					"name": "Register Admin (requires admin token)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"console.log('Admin created:', jsonData);"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
@@ -200,530 +209,74 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/auth/register-admin",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"register-admin"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register-admin"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.token) {",
-									"    pm.collectionVariables.set('token', jsonData.token);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"phone\": 212612345678,\n    \"password\": \"password123\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/login",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"login"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Current User",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/me",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"me"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Logout",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.collectionVariables.set('token', '');"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/logout",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"auth",
-								"logout"
-							]
-						}
-					},
-					"response": []
+					}
 				}
 			]
 		},
 		{
-			"name": "Files",
-			"description": "Upload et gestion de fichiers",
-			"item": [
-				{
-					"name": "Upload Single File",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "file",
-									"type": "file",
-									"src": ""
-								}
-							]
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/files/upload",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"files",
-								"upload"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Upload Multiple Files",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "files",
-									"type": "file",
-									"src": ""
-								},
-								{
-									"key": "files",
-									"type": "file",
-									"src": ""
-								}
-							]
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/files/upload-multiple",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"files",
-								"upload-multiple"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get File",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/files/example-filename.jpg",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"files",
-								"example-filename.jpg"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete File",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/files/example-filename.jpg",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"files",
-								"example-filename.jpg"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Users",
+			"name": "👤 Users",
 			"item": [
 				{
 					"name": "Get All Users",
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/users",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Get User By ID",
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
-					"name": "Create User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"john_doe\",\n    \"phone\": 212612345678,\n    \"onesignalPlayerId\": \"player-id-123\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/users",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update User",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"john_doe_updated\",\n    \"phone\": 212698765432,\n    \"onesignalPlayerId\": \"player-id-456\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Patch User (Partial Update)",
+					"name": "Update User (PATCH)",
 					"request": {
 						"method": "PATCH",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"john_doe_patched\"\n}"
+							"raw": "{\n    \"username\": \"updated_username\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete User",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get User By Phone",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/by-phone/212612345678",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"by-phone",
-								"212612345678"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get User Stats",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1/stats",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"1",
-								"stats"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update FCM Token",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"token\": \"fcm_token_here_from_firebase_messaging\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1/fcm-token",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"1",
-								"fcm-token"
-							],
-							"description": "Enregistre ou met à jour le token FCM d'un utilisateur pour recevoir les notifications push"
-						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Update User Role (Admin only)",
 					"request": {
 						"method": "PUT",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
@@ -731,728 +284,201 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/users/1/role",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"users",
-								"1",
-								"role"
-							],
-							"description": "Change le rôle d'un utilisateur (USER ou ADMIN). Réservé aux admins."
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1", "role"]
 						}
-					},
-					"response": []
+					}
+				},
+				{
+					"name": "Get User By Phone",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/by-phone/78123456",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "by-phone", "78123456"]
+						}
+					}
+				},
+				{
+					"name": "Get User Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/1/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "1", "stats"]
+						}
+					}
 				}
 			]
 		},
 		{
-			"name": "Categories",
-			"item": [
-				{
-					"name": "Get All Categories",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/categories",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"categories"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Category By ID",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/categories/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"categories",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Create Category",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Plastique\",\n    \"description\": \"Déchets plastiques recyclables\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/categories",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"admin",
-								"categories"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update Category",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Plastique PET\",\n    \"description\": \"Bouteilles et emballages PET\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/categories/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"admin",
-								"categories",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Patch Category (Partial Update)",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"description\": \"Description mise à jour partiellement\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/categories/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"admin",
-								"categories",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Category",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/categories/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"admin",
-								"categories",
-								"1"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Products",
+			"name": "📦 Products",
 			"item": [
 				{
 					"name": "Get All Products",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Get Product By ID",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "1"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Products By User",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/products/user/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"user",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Products By User With Status",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/products/user/1/status?status=available",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"user",
-								"1",
-								"status"
-							],
-							"query": [
-								{
-									"key": "status",
-									"value": "available",
-									"description": "Filter by status: available, recycled, pending"
-								}
-							]
-						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Get Products By Category",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/category/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"category",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "category", "1"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Search Products",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/api/products/search?query=plastique&categoryId=1&excludeUserId=2",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"search"
-							],
-							"query": [
-								{
-									"key": "query",
-									"value": "plastique",
-									"description": "Search by title"
-								},
-								{
-									"key": "categoryId",
-									"value": "1",
-									"description": "Filter by category ID (optional)"
-								},
-								{
-									"key": "excludeUserId",
-									"value": "2",
-									"description": "Exclude products from this user (optional)"
-								}
-							]
+							"raw": "{{baseUrl}}/api/products/search?query=plastique",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "search"],
+							"query": [{"key": "query", "value": "plastique"}]
 						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Create Product",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"imageUrls\": [\n        \"http://localhost:8081/api/files/image1.jpg\",\n        \"http://localhost:8081/api/files/image2.jpg\"\n    ],\n    \"categoryId\": 1\n}"
+							"raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"categoryId\": 1\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/products",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products"
-							]
-						},
-						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. L'utilisateur connecté devient automatiquement le propriétaire (userId non requis dans le body). Retourne 401 si non authentifié."
-					},
-					"response": []
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products"]
+						}
+					}
 				},
 				{
-					"name": "Update Product",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"title\": \"Bouteilles en plastique - Promo\",\n    \"desc\": \"Lot de 50 bouteilles PET propres - Prix réduit\",\n    \"price\": 20.00,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 80,\n    \"status\": \"available\",\n    \"imageUrls\": [\n        \"http://localhost:8081/api/files/image1-updated.jpg\"\n    ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/products/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"1"
-							]
-						},
-						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. Seul le propriétaire du produit peut le modifier. Retourne 401 si non authentifié, 403 si pas propriétaire."
-					},
-					"response": []
-				},
-				{
-					"name": "Patch Product (Partial Update)",
+					"name": "Update Product (PATCH)",
 					"request": {
 						"method": "PATCH",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"price\": 22.50,\n    \"status\": \"available\"\n}"
+							"raw": "{\n    \"price\": 22.50\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "1"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Accept Offer (Update Quantity)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"quantityOffer\": 20\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/products/1/accept-offer",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"1",
-								"accept-offer"
-							]
-						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Delete Product",
 					"request": {
 						"method": "DELETE",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/products/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "products", "1"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Admin Update Any Product",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"price\": 5000.0,\n    \"status\": \"available\",\n    \"title\": \"Modified by Admin\",\n    \"userId\": 1\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/products/admin/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"products",
-								"admin",
-								"1"
-							]
-						}
-					},
-					"response": []
+					}
 				}
 			]
 		},
 		{
-			"name": "Negotiations",
+			"name": "🤝 Negotiations",
 			"item": [
 				{
 					"name": "Get All Negotiations",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Get Negotiation By ID",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "1"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Negotiations By Sender",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/sender/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"sender",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Negotiations By Receiver",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/receiver/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"receiver",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Negotiations By Product",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/product/1?status=pending",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"product",
-								"1"
-							],
-							"query": [
-								{
-									"key": "status",
-									"value": "pending",
-									"description": "Filter by status: pending, accepted, rejected (optional)"
-								}
-							]
-						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Create Negotiation",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"receiverId\": 2,\n    \"productId\": 1,\n    \"status\": \"pending\",\n    \"price\": 22.00,\n    \"quantity\": 50\n}"
+							"raw": "{\n    \"receiverId\": 2,\n    \"productId\": 1,\n    \"price\": 22.00,\n    \"quantity\": 50\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations"
-							]
-						},
-						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. L'utilisateur connecté devient automatiquement l'expéditeur (senderId non requis dans le body). Une notification sera automatiquement envoyée au receiver. Retourne 401 si non authentifié."
-					},
-					"response": []
-				},
-				{
-					"name": "Update Negotiation",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"status\": \"accepted\",\n    \"price\": 21.00,\n    \"quantity\": 50\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations"]
 						}
-					},
-					"response": []
+					}
 				},
 				{
-					"name": "Patch Negotiation (Partial Update)",
+					"name": "Update Negotiation Status",
 					"request": {
 						"method": "PATCH",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
@@ -1460,830 +486,142 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "negotiations", "1"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Accept Negotiation",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"status\": \"accepted\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Reject Negotiation",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"status\": \"rejected\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"1"
-							]
-						},
-						"description": "Rejette une négociation. Utilisez 'refused' pour déclencher une notification au sender."
-					},
-					"response": []
-				},
-				{
-					"name": "Refuse Negotiation (triggers notification)",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"status\": \"refused\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"1"
-							]
-						},
-						"description": "Refuse une offre. Une notification sera automatiquement envoyée au sender de l'offre."
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Negotiation",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"negotiations",
-								"1"
-							]
-						}
-					},
-					"response": []
+					}
 				}
 			]
 		},
 		{
-			"name": "Notifications",
+			"name": "📬 Notifications",
 			"item": [
 				{
 					"name": "Get All Notifications",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications"
-							]
-						},
-						"description": "Endpoint public - Aucun token requis"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Notification By ID",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"1"
-							]
-						},
-						"description": "Endpoint public - Aucun token requis"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Notifications By Receiver",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/receiver/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"receiver",
-								"1"
-							]
-						},
-						"description": "Endpoint public - Aucun token requis"
-					},
-					"response": []
-				},
-				{
-					"name": "Create Notification",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"title\": \"Nouvelle offre\",\n    \"message\": \"Vous avez reçu une nouvelle offre pour votre produit\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications"
-							]
-						},
-						"description": "⚠️ AUTHENTIFICATION REQUISE - Token JWT obligatoire. Retourne 401 si non authentifié."
-					},
-					"response": []
-				},
-				{
-					"name": "Update Notification",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"senderId\": 1,\n    \"receiverId\": 2,\n    \"title\": \"Offre acceptée\",\n    \"message\": \"Votre offre a été acceptée par le vendeur\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"1"
-							]
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Patch Notification (Partial Update)",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"message\": \"Message mis à jour partiellement\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Notification",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"1"
-							]
-						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Get Unread Notifications",
 					"request": {
 						"method": "GET",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/receiver/1/unread",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"receiver",
-								"1",
-								"unread"
-							],
-							"description": "Récupère toutes les notifications non lues d'un utilisateur"
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "receiver", "1", "unread"]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Unread Notifications Count",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/receiver/1/unread/count",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"receiver",
-								"1",
-								"unread",
-								"count"
-							],
-							"description": "Récupère le nombre de notifications non lues d'un utilisateur (retourne un nombre)"
-						}
-					},
-					"response": []
+					}
 				},
 				{
 					"name": "Mark Notification as Read",
 					"request": {
 						"method": "PATCH",
 						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/api/notifications/1/read",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"notifications",
-								"1",
-								"read"
-							],
-							"description": "Marque une notification comme lue"
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "notifications", "1", "read"]
 						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Admin Notifications",
-			"description": "Endpoints pour les notifications admin (nécessite rôle ADMIN)",
-			"item": [
+					}
+				},
 				{
-					"name": "Send Broadcast Notification",
+					"name": "Send Broadcast (Admin only)",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"title\": \"Nouveau forfait disponible !\",\n    \"message\": \"Découvrez notre nouveau forfait premium avec des avantages exclusifs. Profitez-en maintenant !\"\n}"
+							"raw": "{\n    \"title\": \"Notification importante\",\n    \"message\": \"Message pour tous les utilisateurs\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/admin/notifications/broadcast",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"admin",
-								"notifications",
-								"broadcast"
-							],
-							"description": "Envoie une notification à tous les utilisateurs (nécessite rôle ADMIN)"
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "notifications", "broadcast"]
 						}
-					},
-					"response": []
+					}
 				}
 			]
 		},
 		{
-			"name": "Phone Verifications",
+			"name": "📞 Phone Verification",
 			"item": [
 				{
-					"name": "Get All Phone Verifications",
+					"name": "Verify Phone (GET)",
 					"request": {
 						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
 						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"phone-verifications"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Phone Verification By ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"phone-verifications",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Phone Verification By User",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/user/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"phone-verifications",
-								"user",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Verify Phone Code",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/verify?phone=212612345678&code=123456",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"phone-verifications",
-								"verify"
-							],
+							"raw": "{{baseUrl}}/api/phone-verifications/verify?phone=78123456&code=123456",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications", "verify"],
 							"query": [
-								{
-									"key": "phone",
-									"value": "212612345678",
-									"description": "Phone number to verify"
-								},
-								{
-									"key": "code",
-									"value": "123456",
-									"description": "Verification code"
-								}
+								{"key": "phone", "value": "78123456"},
+								{"key": "code", "value": "123456"}
 							]
 						}
-					},
-					"response": []
-				},
-				{
-					"name": "Create Phone Verification",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"phone\": \"212612345678\",\n    \"code\": \"123456\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"phone-verifications"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update Phone Verification",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"userId\": 1,\n    \"code\": \"123456\",\n    \"verified\": true\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"phone-verifications",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Phone Verification",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"phone-verifications",
-								"1"
-							]
-						}
-					},
-					"response": []
+					}
 				}
 			]
 		},
 		{
-			"name": "FCM Test",
-			"description": "Endpoints pour tester les notifications push Firebase Cloud Messaging",
+			"name": "🔥 FCM Testing",
+			"description": "Tester les notifications push Firebase Cloud Messaging",
 			"item": [
 				{
-					"name": "1. FCM Status",
+					"name": "FCM Status",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/fcm-test/status",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"fcm-test",
-								"status"
-							]
-						},
-						"description": "Vérifie si Firebase est initialisé et prêt à envoyer des notifications"
-					},
-					"response": []
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "fcm-test", "status"]
+						}
+					}
 				},
 				{
-					"name": "2. List Users with FCM Status",
+					"name": "List Users with FCM Status",
 					"request": {
 						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/fcm-test/users",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"fcm-test",
-								"users"
-							]
-						},
-						"description": "Liste tous les utilisateurs avec leur statut de token FCM (hasFcmToken: true/false)"
-					},
-					"response": []
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "fcm-test", "users"]
+						}
+					}
 				},
 				{
-					"name": "3. Register FCM Token",
+					"name": "Send Test Notification to User",
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
+							{"key": "Content-Type", "value": "application/json"}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"fcmToken\": \"COLLER_LE_TOKEN_FCM_DE_L_APP_MOBILE_ICI\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/fcm-test/register-token/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"fcm-test",
-								"register-token",
-								"1"
-							]
-						},
-						"description": "Enregistre ou met à jour le token FCM pour un utilisateur. Le token FCM est obtenu depuis l'app mobile via FirebaseMessaging.instance.getToken()"
-					},
-					"response": []
-				},
-				{
-					"name": "4. Send Test Notification to User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"title\": \"🔔 Test Notification\",\n    \"message\": \"Ceci est une notification de test envoyée depuis Postman!\",\n    \"type\": \"TEST\"\n}"
+							"raw": "{\n    \"title\": \"🔔 Test\",\n    \"message\": \"Notification de test\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/fcm-test/send/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"fcm-test",
-								"send",
-								"1"
-							]
-						},
-						"description": "Envoie une notification push à un utilisateur. L'utilisateur doit avoir un token FCM enregistré. Le body est optionnel (valeurs par défaut si vide)."
-					},
-					"response": []
-				},
-				{
-					"name": "5. Send Direct Notification (with token)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"fcmToken\": \"COLLER_LE_TOKEN_FCM_ICI\",\n    \"title\": \"🚀 Notification Directe\",\n    \"message\": \"Envoyée directement via le token FCM\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/fcm-test/send-direct",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"fcm-test",
-								"send-direct"
-							]
-						},
-						"description": "Envoie une notification directement à un appareil via son token FCM, sans passer par un utilisateur en base"
-					},
-					"response": []
-				},
-				{
-					"name": "6. Validate FCM Token (Dry Run)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"fcmToken\": \"COLLER_LE_TOKEN_A_VALIDER_ICI\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/fcm-test/validate-token",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"fcm-test",
-								"validate-token"
-							]
-						},
-						"description": "Valide un token FCM sans envoyer de notification (dry-run). Retourne si le token est valide, expiré, ou appartient à un autre projet."
-					},
-					"response": []
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "fcm-test", "send", "1"]
+						}
+					}
 				}
 			]
 		}
