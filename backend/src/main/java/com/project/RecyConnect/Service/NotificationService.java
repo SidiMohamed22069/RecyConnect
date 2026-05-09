@@ -192,6 +192,22 @@ public class NotificationService {
         
         sendNotification(notification);
     }
+
+    public void sendNegotiationNotification(Long receiverId, Long senderId,
+                                            Long negotiationId, String type,
+                                            String title, String message) {
+        NotificationDTO notification = new NotificationDTO();
+        notification.setReceiverId(receiverId);
+        notification.setSenderId(senderId);
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setCreatedAt(OffsetDateTime.now());
+        notification.setType(type);
+        notification.setRelatedId(negotiationId);
+        notification.setIsRead(false);
+
+        sendNotification(notification);
+    }
     
     /**
      * Envoie une notification broadcast à TOUS les utilisateurs

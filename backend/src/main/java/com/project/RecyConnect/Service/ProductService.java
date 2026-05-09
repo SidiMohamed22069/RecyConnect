@@ -1,16 +1,17 @@
 package com.project.RecyConnect.Service;
 
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
 import com.project.RecyConnect.DTO.ProductDTO;
 import com.project.RecyConnect.Model.Product;
 import com.project.RecyConnect.Repository.CategoryRepository;
 import com.project.RecyConnect.Repository.ProductRepository;
 import com.project.RecyConnect.Repository.UserRepo;
-import org.springframework.stereotype.Service;
-
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -18,11 +19,14 @@ public class ProductService {
     private final ProductRepository repo;
     private final CategoryRepository categoryRepo;
     private final UserRepo userRepo;
+    private final NegotiationService negotiationService;
 
-    public ProductService(ProductRepository repo, CategoryRepository categoryRepo, UserRepo userRepo) {
+    public ProductService(ProductRepository repo, CategoryRepository categoryRepo,
+                          UserRepo userRepo, NegotiationService negotiationService) {
         this.repo = repo;
         this.categoryRepo = categoryRepo;
         this.userRepo = userRepo;
+        this.negotiationService = negotiationService;
     }
 
     private ProductDTO toDTO(Product p) {
@@ -114,7 +118,10 @@ public class ProductService {
             existing.setQuantityAvailable(dto.getQuantityAvailable());
             existing.setStatus(dto.getStatus());
             existing.setImageUrls(dto.getImageUrls());
-            return toDTO(repo.save(existing));
+            Product saved = repo.save(existing);
+            negotiationService.onProductStockChanged(saved.getId(),
+                    saved.getUser() != null ? saved.getUser().getId() : null);
+            return toDTO(saved);
         }).orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
@@ -132,7 +139,10 @@ public class ProductService {
                 categoryRepo.findById(dto.getCategoryId()).ifPresent(existing::setCategory);
             if (dto.getUserId() != null)
                 userRepo.findById(dto.getUserId()).ifPresent(existing::setUser);
-            return toDTO(repo.save(existing));
+            Product saved = repo.save(existing);
+            negotiationService.onProductStockChanged(saved.getId(),
+                    saved.getUser() != null ? saved.getUser().getId() : null);
+            return toDTO(saved);
         }).orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
@@ -143,7 +153,10 @@ public class ProductService {
             if (newQuantity <= 0) {
                 existing.setStatus("recycled");
             }
-            return toDTO(repo.save(existing));
+            Product saved = repo.save(existing);
+            negotiationService.onProductStockChanged(saved.getId(),
+                    saved.getUser() != null ? saved.getUser().getId() : null);
+            return toDTO(saved);
         }).orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
