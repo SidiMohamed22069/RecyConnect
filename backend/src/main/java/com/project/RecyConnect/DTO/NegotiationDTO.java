@@ -14,6 +14,8 @@ public class NegotiationDTO {
     private String status;
     private Double price;
     private Integer quantity;
+    private Double totalAmount;
+    private Integer priorityRank;
     
     // Nested info for responses
     private String senderUsername;
