@@ -52,6 +52,13 @@ public class AuthDTO {
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ResetPasswordRequest {
+        private String password;
+    }
+
+    @Data
     public static class AuthResponse {
         private String token;
         private Long userId;

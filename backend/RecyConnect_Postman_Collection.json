@@ -200,6 +200,25 @@
 					}
 				},
 				{
+					"name": "7. Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "Authorization", "value": "Bearer {{token}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"password\": \"12345678\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-password",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "reset-password"]
+						}
+					}
+				},
+				{
 					"name": "Register Admin (requires admin token)",
 					"request": {
 						"method": "POST",
@@ -663,6 +682,51 @@
 		{
 			"name": "📞 Phone Verification",
 			"item": [
+				{
+					"name": "Get All Verification Codes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications"]
+						}
+					}
+				},
+				{
+					"name": "Get Verification By ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Verification By User ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{token}}"},
+							{"key": "X-Device-Id", "value": "{{deviceId}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/phone-verifications/user/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "phone-verifications", "user", "1"]
+						}
+					}
+				},
 				{
 					"name": "Verify Phone (GET)",
 					"request": {
