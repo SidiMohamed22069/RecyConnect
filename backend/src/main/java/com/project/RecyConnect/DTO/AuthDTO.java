@@ -55,6 +55,8 @@ public class AuthDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ResetPasswordRequest {
+        private String phone;
+        private String verificationCode;
         private String password;
     }
 

@@ -321,12 +321,15 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody AuthDTO.ResetPasswordRequest request) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new AuthDTO.AuthResponse("No token provided"));
+    public ResponseEntity<?> resetPassword(@RequestBody AuthDTO.ResetPasswordRequest request) {
+        if (request.getPhone() == null || request.getPhone().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("Phone is required"));
+        }
+
+        if (request.getVerificationCode() == null || request.getVerificationCode().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("Verification code is required"));
         }
 
         if (request.getPassword() == null || request.getPassword().isBlank()) {
@@ -334,16 +337,29 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Password is required"));
         }
 
-        String token = authHeader.substring(7);
-        String username;
+        Long phoneToSearch;
         try {
-            username = jwtUtil.extractEmail(token);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new AuthDTO.AuthResponse("Invalid token"));
+            String phoneStr = request.getPhone();
+            Long parsedPhone = Long.parseLong(phoneStr);
+            if (phoneStr.startsWith("222")) {
+                phoneToSearch = Long.parseLong(phoneStr.substring(3));
+            } else {
+                phoneToSearch = parsedPhone;
+            }
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
 
-        User user = userRepository.findByUsername(username);
+        boolean isCodeValid = phoneVerificationService.verifyCodeBeforeRegistration(
+                phoneToSearch, request.getVerificationCode());
+
+        if (!isCodeValid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Code de vérification invalide ou expiré"));
+        }
+
+        User user = userRepository.findByPhone(phoneToSearch);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new AuthDTO.AuthResponse("User not found"));
@@ -352,17 +368,8 @@ public class AuthController {
         user.setPwd(passwordEncoder.encode(request.getPassword()));
         userRepository.save(user);
 
-        try {
-            Long userId = jwtUtil.extractUserId(token);
-            Long sessionVersion = jwtUtil.extractSessionVersion(token);
-            String tokenDeviceId = jwtUtil.extractDeviceId(token);
-            if (userId != null && sessionVersion != null && tokenDeviceId != null) {
-                userSessionService.revokeIfCurrent(userId, sessionVersion, tokenDeviceId);
-            }
-            jwtUtil.expireToken(token);
-        } catch (Exception ignored) {
-            // Best effort invalidation
-        }
+        phoneVerificationService.cleanupExpiredCodes(phoneToSearch);
+        userSessionService.revokeAllSessionsForUser(user.getId());
 
         return ResponseEntity.ok(new AuthDTO.AuthResponse("Password updated successfully"));
     }

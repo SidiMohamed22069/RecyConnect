@@ -78,6 +78,13 @@ public class UserSessionService {
         }
     }
 
+    @Transactional
+    public void revokeAllSessionsForUser(Long userId) {
+        if (userSessionRepository.existsById(userId)) {
+            userSessionRepository.deleteById(userId);
+        }
+    }
+
     public record SessionReplacementResult(UserSession session, String previousFcmToken) {
     }
 }
