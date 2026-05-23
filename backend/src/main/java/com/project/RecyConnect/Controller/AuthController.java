@@ -320,6 +320,53 @@ public class AuthController {
         return ResponseEntity.ok(new AuthDTO.AuthResponse("Logout successful"));
     }
 
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody AuthDTO.ResetPasswordRequest request) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("No token provided"));
+        }
+
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("Password is required"));
+        }
+
+        String token = authHeader.substring(7);
+        String username;
+        try {
+            username = jwtUtil.extractEmail(token);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("Invalid token"));
+        }
+
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthDTO.AuthResponse("User not found"));
+        }
+
+        user.setPwd(passwordEncoder.encode(request.getPassword()));
+        userRepository.save(user);
+
+        try {
+            Long userId = jwtUtil.extractUserId(token);
+            Long sessionVersion = jwtUtil.extractSessionVersion(token);
+            String tokenDeviceId = jwtUtil.extractDeviceId(token);
+            if (userId != null && sessionVersion != null && tokenDeviceId != null) {
+                userSessionService.revokeIfCurrent(userId, sessionVersion, tokenDeviceId);
+            }
+            jwtUtil.expireToken(token);
+        } catch (Exception ignored) {
+            // Best effort invalidation
+        }
+
+        return ResponseEntity.ok(new AuthDTO.AuthResponse("Password updated successfully"));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
