@@ -23,7 +23,9 @@ public class Product {
     private String unit;
     private Long quantityTotal;
     private Long quantityAvailable;
-    private String status; // mappe ton status_enum; tu peux remplacer par enum Java si tu veux
+
+    @Convert(converter = ProductStatusConverter.class)
+    private ProductStatus status;
     
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))

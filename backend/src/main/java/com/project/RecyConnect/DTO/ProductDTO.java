@@ -1,5 +1,6 @@
 package com.project.RecyConnect.DTO;
 
+import com.project.RecyConnect.Model.ProductStatus;
 import lombok.Data;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -14,7 +15,7 @@ public class ProductDTO {
     private String unit;
     private Long quantityTotal;
     private Long quantityAvailable;
-    private String status;
+    private ProductStatus status;
     private List<String> imageUrls;
     private Long categoryId;
     private Long userId;
