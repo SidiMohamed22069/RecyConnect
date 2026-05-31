@@ -40,7 +40,7 @@ class ProductTest {
                 .unit("kg")
                 .quantityTotal(50L)
                 .quantityAvailable(40L)
-                .status("available")
+            .status(ProductStatus.AVAILABLE)
                 .imageUrls(Arrays.asList("/images/1.jpg", "/images/2.jpg"))
                 .category(category)
                 .user(user)
@@ -160,7 +160,7 @@ class ProductTest {
 
     @Test
     void testGetStatus_ReturnsCorrectStatus() {
-        assertEquals("available", product.getStatus());
+        assertEquals(ProductStatus.AVAILABLE, product.getStatus());
     }
 
     @Test
@@ -282,8 +282,8 @@ class ProductTest {
 
     @Test
     void testSetStatus() {
-        product.setStatus("sold");
-        assertEquals("sold", product.getStatus());
+        product.setStatus(ProductStatus.PENDING);
+        assertEquals(ProductStatus.PENDING, product.getStatus());
     }
 
     @Test
@@ -326,7 +326,7 @@ class ProductTest {
         assertEquals("kg", product.getUnit());
         assertEquals(50L, product.getQuantityTotal());
         assertEquals(40L, product.getQuantityAvailable());
-        assertEquals("available", product.getStatus());
+        assertEquals(ProductStatus.AVAILABLE, product.getStatus());
     }
 
     @Test
