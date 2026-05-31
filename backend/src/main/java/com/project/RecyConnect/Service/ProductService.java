@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.project.RecyConnect.DTO.ProductDTO;
 import com.project.RecyConnect.Model.Product;
+import com.project.RecyConnect.Model.ProductStatus;
 import com.project.RecyConnect.Repository.CategoryRepository;
 import com.project.RecyConnect.Repository.ProductRepository;
 import com.project.RecyConnect.Repository.UserRepo;
@@ -79,7 +80,10 @@ public class ProductService {
     }
 
     public List<ProductDTO> findByUserId(Long userId) {
-        return repo.findByUserId(userId).stream().map(this::toDTO).collect(Collectors.toList());
+        return repo.findByUserId(userId).stream()
+                .filter(p -> p.getStatus() != ProductStatus.ARCHIVED)
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     public List<ProductDTO> findByCategoryId(Long categoryId) {
@@ -88,7 +92,7 @@ public class ProductService {
 
     public List<ProductDTO> search(String query, Long categoryId, Long excludeUserId) {
         return repo.findAll().stream()
-                .filter(p -> "available".equalsIgnoreCase(p.getStatus()))
+                .filter(p -> p.getStatus() == ProductStatus.AVAILABLE)
                 .filter(p -> excludeUserId == null || p.getUser() == null || !p.getUser().getId().equals(excludeUserId))
                 .filter(p -> categoryId == null || (p.getCategory() != null && p.getCategory().getId().equals(categoryId)))
                 .filter(p -> query == null || query.isEmpty() || 
@@ -98,10 +102,18 @@ public class ProductService {
     }
 
     public List<ProductDTO> findByUserIdWithStatus(Long userId, String status) {
+        ProductStatus filterStatus = parseStatus(status);
         return repo.findByUserId(userId).stream()
-                .filter(p -> status == null || status.isEmpty() || status.equalsIgnoreCase(p.getStatus()))
+                .filter(p -> filterStatus == null || filterStatus == p.getStatus())
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    private ProductStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        return ProductStatus.fromValue(status);
     }
 
     public ProductDTO save(ProductDTO dto) {
@@ -151,7 +163,7 @@ public class ProductService {
             Long newQuantity = existing.getQuantityAvailable() - quantityOffer;
             existing.setQuantityAvailable(newQuantity);
             if (newQuantity <= 0) {
-                existing.setStatus("recycled");
+                existing.setStatus(ProductStatus.RECYCLED);
             }
             Product saved = repo.save(existing);
             negotiationService.onProductStockChanged(saved.getId(),

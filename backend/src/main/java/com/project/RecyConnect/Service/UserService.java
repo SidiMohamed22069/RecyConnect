@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Product;
+import com.project.RecyConnect.Model.ProductStatus;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Repository.ProductRepository;
@@ -128,10 +129,10 @@ public class UserService implements UserDetailsService {
             
             int totalProducts = userProducts.size();
             int recycledCount = (int) userProducts.stream()
-                    .filter(p -> "recycled".equalsIgnoreCase(p.getStatus()))
+                    .filter(p -> p.getStatus() == ProductStatus.RECYCLED)
                     .count();
             int availableCount = (int) userProducts.stream()
-                    .filter(p -> "available".equalsIgnoreCase(p.getStatus()))
+                    .filter(p -> p.getStatus() == ProductStatus.AVAILABLE)
                     .count();
             
             String recyclingRate = "0%";

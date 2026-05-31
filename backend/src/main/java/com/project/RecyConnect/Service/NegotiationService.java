@@ -5,6 +5,7 @@ import com.project.RecyConnect.DTO.NegotiationDTO;
 import com.project.RecyConnect.Model.Negotiation;
 import com.project.RecyConnect.Model.NegotiationStatus;
 import com.project.RecyConnect.Model.Product;
+import com.project.RecyConnect.Model.ProductStatus;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Repository.NegotiationRepository;
 import com.project.RecyConnect.Repository.ProductRepository;
@@ -307,7 +308,7 @@ public class NegotiationService {
 
         product.setQuantityAvailable(available - requested);
         if (product.getQuantityAvailable() <= 0L) {
-            product.setStatus("recycled");
+            product.setStatus(ProductStatus.RECYCLED);
         }
         productRepo.save(product);
 
