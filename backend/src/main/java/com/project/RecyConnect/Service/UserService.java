@@ -126,12 +126,15 @@ public class UserService implements UserDetailsService {
     public Optional<UserStatsDTO> getUserStats(Long userId) {
         return userRepository.findById(userId).map(user -> {
             List<Product> userProducts = productRepository.findByUserId(userId);
+            List<Product> nonArchivedProducts = userProducts.stream()
+                .filter(p -> p.getStatus() != ProductStatus.ARCHIVED)
+                .collect(Collectors.toList());
             
-            int totalProducts = userProducts.size();
-            int recycledCount = (int) userProducts.stream()
+            int totalProducts = nonArchivedProducts.size();
+            int recycledCount = (int) nonArchivedProducts.stream()
                     .filter(p -> p.getStatus() == ProductStatus.RECYCLED)
                     .count();
-            int availableCount = (int) userProducts.stream()
+            int availableCount = (int) nonArchivedProducts.stream()
                     .filter(p -> p.getStatus() == ProductStatus.AVAILABLE)
                     .count();
             
