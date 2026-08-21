@@ -1,10 +1,10 @@
 # Code Review — RecyConnect Backend
 
 **Date :** 2026-08-21
-**Périmètre :** `backend/` — Spring Boot 3.5.6, Java 21, PostgreSQL, JWT, WebSocket/STOMP, Firebase FCM
+**Périmètre :** Spring Boot 3.5.6, Java 21, PostgreSQL, JWT, WebSocket/STOMP, Firebase FCM
 **Volume :** 63 fichiers Java, ~6 500 lignes (dont ~1 700 de tests)
-**Build :** `mvn compile` passe sans erreur ni warning avec JDK 21.
-**Tests :** non exécutés — le plugin `maven-surefire` n'est pas présent dans le dépôt Maven local et l'environnement est hors ligne. L'analyse des tests ci-dessous est statique.
+**Build :** `./mvnw compile` passe sans erreur ni warning avec JDK 21.
+**Tests :** `./mvnw test` — **208 tests, 0 échec** après correctifs. Au moment de la revue initiale, 3 tests échouaient déjà sur `main` (voir le suivi en fin de document).
 
 ---
 
@@ -31,7 +31,7 @@ En revanche, **la couche de sécurité est la faiblesse majeure et bloquante**. 
 
 ### C1. N'importe qui peut créer un compte ADMIN
 
-[AuthController.java:145-148](backend/src/main/java/com/project/RecyConnect/Controller/AuthController.java#L145-L148)
+[AuthController.java:145-148](src/main/java/com/project/RecyConnect/Controller/AuthController.java#L145-L148)
 
 ```java
 Role userRole = Role.USER;
@@ -48,7 +48,7 @@ L'endpoint `/api/auth/register` est public. Le rôle provient du corps de la req
 
 ### C2. Le code de vérification SMS est renvoyé dans la réponse HTTP
 
-[AuthController.java:52-54](backend/src/main/java/com/project/RecyConnect/Controller/AuthController.java#L52-L54) et [PhoneVerificationService.java:155](backend/src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java#L155)
+[AuthController.java:52-54](src/main/java/com/project/RecyConnect/Controller/AuthController.java#L52-L54) et [PhoneVerificationService.java:155](src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java#L155)
 
 ```java
 return ResponseEntity.ok(new AuthDTO.AuthResponse(
@@ -69,7 +69,7 @@ Le commentaire « en production, ne pas retourner le code » est présent mais l
 
 ### C3. `/api/fcm-test/**` est public et expose tout
 
-[WebSecurityConfiguration.java:44-45](backend/src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L44-L45) + [FCMTestController.java](backend/src/main/java/com/project/RecyConnect/Controller/FCMTestController.java)
+[WebSecurityConfiguration.java:44-45](src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L44-L45) + [FCMTestController.java](src/main/java/com/project/RecyConnect/Controller/FCMTestController.java)
 
 Sans aucun token :
 
@@ -86,7 +86,7 @@ Sans aucun token :
 
 ### C4. Les codes OTP de tous les utilisateurs sont lisibles et forgeables
 
-[PhoneVerificationController.java:16-17,41-44](backend/src/main/java/com/project/RecyConnect/Controller/PhoneVerificationController.java#L16-L44)
+`Controller/PhoneVerificationController.java:16-17,41-44` *(fichier supprimé depuis — voir le suivi en fin de document)*
 
 ```java
 @GetMapping
@@ -108,16 +108,16 @@ Résultat : **tout utilisateur authentifié** (donc n'importe qui, il suffit de 
 
 | Secret | Emplacement |
 |---|---|
-| Mot de passe PostgreSQL | [application.properties:7](backend/src/main/resources/application.properties#L7) |
-| Clé de validation API SMS Chinguisoft | [application.properties:27](backend/src/main/resources/application.properties#L27) |
-| Token API SMS Chinguisoft | [application.properties:28](backend/src/main/resources/application.properties#L28) |
-| Secret de signature JWT | [JwtUtil.java:21](backend/src/main/java/com/project/RecyConnect/Security/JwtUtil.java#L21) (constante `SECRET` en dur) |
+| Mot de passe PostgreSQL | [application.properties:7](src/main/resources/application.properties#L7) |
+| Clé de validation API SMS Chinguisoft | [application.properties:27](src/main/resources/application.properties#L27) |
+| Token API SMS Chinguisoft | [application.properties:28](src/main/resources/application.properties#L28) |
+| Secret de signature JWT | [JwtUtil.java:21](src/main/java/com/project/RecyConnect/Security/JwtUtil.java#L21) (constante `SECRET` en dur) |
 
 `.gitignore` liste bien `src/main/resources/application.properties`, mais **le fichier est déjà suivi par Git** — un `.gitignore` n'a aucun effet sur un fichier déjà indexé. Vérification :
 
 ```
-$ git ls-files backend/src/main/resources/application.properties
-backend/src/main/resources/application.properties   ← suivi
+$ git ls-files src/main/resources/application.properties
+src/main/resources/application.properties   ← suivi
 ```
 
 Les secrets sont présents dans l'historique **depuis le commit initial** (`24574d8`), et le token SMS a même été modifié dans un commit dédié (`42a3dda`).
@@ -126,7 +126,7 @@ Le secret JWT en dur est particulièrement grave : quiconque lit le dépôt peut
 
 **Correction :**
 1. Révoquer immédiatement le token SMS et changer le mot de passe DB — ils sont à considérer comme compromis.
-2. `git rm --cached backend/src/main/resources/application.properties`.
+2. `git rm --cached src/main/resources/application.properties`.
 3. Externaliser via variables d'environnement (`${JWT_SECRET}`, `${SMS_TOKEN}`…), comme le fait déjà correctement `application-prod.properties`.
 4. Purger l'historique (`git filter-repo`) ou considérer le dépôt comme définitivement fuité.
 
@@ -134,7 +134,7 @@ Le secret JWT en dur est particulièrement grave : quiconque lit le dépôt peut
 
 ### C6. WebSocket : authentification désactivée, canal de notifications ouvert
 
-[WebSocketConfig.java:39-44](backend/src/main/java/com/project/RecyConnect/Config/WebSocketConfig.java#L39-L44)
+[WebSocketConfig.java:39-44](src/main/java/com/project/RecyConnect/Config/WebSocketConfig.java#L39-L44)
 
 ```java
 @Override
@@ -147,9 +147,9 @@ public void configureClientInboundChannel(ChannelRegistration registration) {
 
 `WebSocketAuthInterceptor` est écrit, testé… et **jamais branché**. Combiné à :
 
-- `/ws/**` en `permitAll` ([WebSecurityConfiguration.java:38](backend/src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L38))
-- `JwtRequestFilter` qui ignore explicitement `/ws` ([JwtRequestFilter.java:39-43](backend/src/main/java/com/project/RecyConnect/Config/JwtRequestFilter.java#L39-L43))
-- un broker `enableSimpleBroker("/user")` avec destination `/user/{userId}/notifications` ([WebSocketService.java:27](backend/src/main/java/com/project/RecyConnect/Service/WebSocketService.java#L27))
+- `/ws/**` en `permitAll` ([WebSecurityConfiguration.java:38](src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L38))
+- `JwtRequestFilter` qui ignore explicitement `/ws` ([JwtRequestFilter.java:39-43](src/main/java/com/project/RecyConnect/Config/JwtRequestFilter.java#L39-L43))
+- un broker `enableSimpleBroker("/user")` avec destination `/user/{userId}/notifications` ([WebSocketService.java:27](src/main/java/com/project/RecyConnect/Service/WebSocketService.java#L27))
 
 `/user/{id}/notifications` n'est **pas** une destination utilisateur Spring (qui nécessite `convertAndSendToUser` + `/user/queue/...`), c'est un simple topic public. N'importe qui peut se connecter à `/ws` sans token et s'abonner à `/user/1/notifications`, `/user/2/notifications`… pour lire les notifications privées de tous les utilisateurs en temps réel.
 
@@ -159,7 +159,7 @@ public void configureClientInboundChannel(ChannelRegistration registration) {
 
 ### C7. Toutes les notifications de tous les utilisateurs sont publiques
 
-[WebSecurityConfiguration.java:57](backend/src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L57) — `/api/notifications/**` est en `permitAll` sur GET.
+[WebSecurityConfiguration.java:57](src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L57) — `/api/notifications/**` est en `permitAll` sur GET.
 
 ```
 GET /api/notifications                      → toutes les notifications de la plateforme
@@ -178,7 +178,7 @@ Le fichier [API_USER_ACCESS.md](API_USER_ACCESS.md) documente ces routes comme v
 
 ### C8. IDOR sur les comptes utilisateurs
 
-[UserController.java:45-90](backend/src/main/java/com/project/RecyConnect/Controller/UserController.java#L45-L90)
+[UserController.java:45-90](src/main/java/com/project/RecyConnect/Controller/UserController.java#L45-L90)
 
 ```java
 @PutMapping("/{id}")
@@ -193,7 +193,7 @@ public ResponseEntity<Void> delete(@PathVariable Long id) {
 
 Contrairement à `ProductController` et `NegotiationController` qui vérifient correctement la propriété, `UserController` ne fait **aucun contrôle**. Tout utilisateur authentifié peut modifier le username/téléphone/photo de n'importe quel compte, ou le supprimer.
 
-La suppression est destructrice en cascade : `User` porte `cascade = CascadeType.ALL, orphanRemoval = true` sur `products`, `negotiationsSent` et `negotiationsReceived` ([User.java:40-47](backend/src/main/java/com/project/RecyConnect/Model/User.java#L40-L47)). Supprimer un utilisateur efface aussi tous ses produits et toutes ses négociations — y compris celles de ses contreparties.
+La suppression est destructrice en cascade : `User` porte `cascade = CascadeType.ALL, orphanRemoval = true` sur `products`, `negotiationsSent` et `negotiationsReceived` ([User.java:40-47](src/main/java/com/project/RecyConnect/Model/User.java#L40-L47)). Supprimer un utilisateur efface aussi tous ses produits et toutes ses négociations — y compris celles de ses contreparties.
 
 **Correction :** vérifier `currentUser.getId().equals(id) || isAdmin` sur `PUT`, `PATCH` et `DELETE`, à l'image de ce qui est déjà fait pour les produits.
 
@@ -203,7 +203,7 @@ La suppression est destructrice en cascade : `User` porte `cascade = CascadeType
 
 ### M1. Les rôles ne sont jamais chargés → toutes les protections admin sont inopérantes
 
-[UserService.java:34-40](backend/src/main/java/com/project/RecyConnect/Service/UserService.java#L34-L40)
+[UserService.java:34-40](src/main/java/com/project/RecyConnect/Service/UserService.java#L34-L40)
 
 ```java
 return new org.springframework.security.core.userdetails.User(
@@ -211,9 +211,9 @@ return new org.springframework.security.core.userdetails.User(
                                                                 //  ↑ aucune autorité
 ```
 
-L'entité `User` implémente pourtant correctement `getAuthorities()` en renvoyant `ROLE_ADMIN` / `ROLE_USER` ([User.java:52-55](backend/src/main/java/com/project/RecyConnect/Model/User.java#L52-L55)) — mais cette méthode n'est jamais utilisée, car `loadUserByUsername` construit un `UserDetails` Spring vide.
+L'entité `User` implémente pourtant correctement `getAuthorities()` en renvoyant `ROLE_ADMIN` / `ROLE_USER` ([User.java:52-55](src/main/java/com/project/RecyConnect/Model/User.java#L52-L55)) — mais cette méthode n'est jamais utilisée, car `loadUserByUsername` construit un `UserDetails` Spring vide.
 
-`JwtRequestFilter` propage ces autorités vides dans le `SecurityContext` ([JwtRequestFilter.java:87](backend/src/main/java/com/project/RecyConnect/Config/JwtRequestFilter.java#L87)). Conséquence : **tous** les contrôles de rôle échouent, même pour un vrai admin :
+`JwtRequestFilter` propage ces autorités vides dans le `SecurityContext` ([JwtRequestFilter.java:87](src/main/java/com/project/RecyConnect/Config/JwtRequestFilter.java#L87)). Conséquence : **tous** les contrôles de rôle échouent, même pour un vrai admin :
 
 - `@PreAuthorize("hasRole('ADMIN')")` sur `/register-admin`, `/api/users/{id}/role`, `/api/products/admin/{id}`, `/api/admin/notifications/broadcast`
 - `.requestMatchers(...).hasRole("ADMIN")` dans la config
@@ -232,7 +232,7 @@ La config protège `/api/phone-verification/**`, le contrôleur est mappé sur `
 
 ### M3. Gestion des JWT
 
-[JwtUtil.java](backend/src/main/java/com/project/RecyConnect/Security/JwtUtil.java)
+[JwtUtil.java](src/main/java/com/project/RecyConnect/Security/JwtUtil.java)
 
 - **Liste noire en mémoire** (`invalidatedTokens`, ligne 22) : fuite mémoire (aucune purge, elle grossit indéfiniment), perdue au redémarrage (les tokens « déconnectés » redeviennent valides), et inopérante dès qu'il y a plus d'une instance. Le mécanisme `UserSession` en base est bien plus solide — cette liste fait doublon et devrait disparaître.
 - **Durée de vie de 23 h** (ligne 52) sans refresh token : fenêtre d'exploitation très large en cas de vol.
@@ -242,7 +242,7 @@ La config protège `/api/phone-verification/**`, le contrôleur est mappé sur `
 
 ### M4. CORS permissif
 
-[SimpleCorsFilter.java:29-33](backend/src/main/java/com/project/RecyConnect/Config/SimpleCorsFilter.java#L29-L33)
+[SimpleCorsFilter.java:29-33](src/main/java/com/project/RecyConnect/Config/SimpleCorsFilter.java#L29-L33)
 
 ```java
 String originHeader = request.getHeader("origin");
@@ -250,7 +250,7 @@ response.setHeader("Access-Control-Allow-Origin", originHeader);   // reflète n
 response.setHeader("Access-Control-Allow-Headers", "*");
 ```
 
-Le champ `clientAppUrl` est injecté depuis `app.client.url` puis **jamais utilisé**. En production, `app.client.url=*` ([application-prod.properties:24](backend/src/main/resources/application-prod.properties#L24)) avec le commentaire « Allow all origins in prod ». Le filtre ne pose pas `Allow-Credentials`, ce qui limite l'impact, mais toute API publique reste appelable depuis n'importe quel site.
+Le champ `clientAppUrl` est injecté depuis `app.client.url` puis **jamais utilisé**. En production, `app.client.url=*` ([application-prod.properties:24](src/main/resources/application-prod.properties#L24)) avec le commentaire « Allow all origins in prod ». Le filtre ne pose pas `Allow-Credentials`, ce qui limite l'impact, mais toute API publique reste appelable depuis n'importe quel site.
 
 **Correction :** utiliser `CorsConfigurationSource` de Spring Security avec une liste blanche d'origines, et supprimer ce filtre manuel.
 
@@ -258,7 +258,7 @@ Le champ `clientAppUrl` est injecté depuis `app.client.url` puis **jamais utili
 
 ### M5. `PATCH /api/negotiations/{id}` permet de contourner le flux d'acceptation
 
-[NegotiationService.java:196-208](backend/src/main/java/com/project/RecyConnect/Service/NegotiationService.java#L196-L208)
+[NegotiationService.java:196-208](src/main/java/com/project/RecyConnect/Service/NegotiationService.java#L196-L208)
 
 ```java
 if (dto.getStatus() != null) existing.setStatus(dto.getStatus());       // statut libre
@@ -275,23 +275,23 @@ Le contrôleur autorise l'acheteur **ou** le vendeur. Un acheteur peut donc pass
 
 ### M6. Les catégories sont modifiables par tout utilisateur
 
-[CategoryController.java:25-50](backend/src/main/java/com/project/RecyConnect/Controller/CategoryController.java#L25-L50) — `POST`, `PUT`, `PATCH`, `DELETE` ne demandent qu'une authentification. N'importe quel compte peut renommer ou supprimer les catégories du référentiel. `API_USER_ACCESS.md` mentionne un `/api/admin/categories` qui **n'existe pas dans le code**.
+[CategoryController.java:25-50](src/main/java/com/project/RecyConnect/Controller/CategoryController.java#L25-L50) — `POST`, `PUT`, `PATCH`, `DELETE` ne demandent qu'une authentification. N'importe quel compte peut renommer ou supprimer les catégories du référentiel. `API_USER_ACCESS.md` mentionne un `/api/admin/categories` qui **n'existe pas dans le code**.
 
 ---
 
 ### M7. Notifications forgeables
 
-[NotificationController.java:30-31](backend/src/main/java/com/project/RecyConnect/Controller/NotificationController.java#L30-L31) — `POST /api/notifications` accepte `senderId` et `receiverId` du client sans contrôle. Tout utilisateur peut usurper l'identité d'un autre, envoyer un push arbitraire (`NotificationService.save` déclenche WebSocket ou FCM), lire/modifier/supprimer la notification de n'importe qui via `PUT`/`PATCH`/`DELETE`.
+[NotificationController.java:30-31](src/main/java/com/project/RecyConnect/Controller/NotificationController.java#L30-L31) — `POST /api/notifications` accepte `senderId` et `receiverId` du client sans contrôle. Tout utilisateur peut usurper l'identité d'un autre, envoyer un push arbitraire (`NotificationService.save` déclenche WebSocket ou FCM), lire/modifier/supprimer la notification de n'importe qui via `PUT`/`PATCH`/`DELETE`.
 
 ---
 
 ### M8. Upload de fichiers sans aucune validation
 
-[FileController.java:56-83](backend/src/main/java/com/project/RecyConnect/Controller/FileController.java#L56-L83)
+[FileController.java:56-83](src/main/java/com/project/RecyConnect/Controller/FileController.java#L56-L83)
 
 - Aucun contrôle du type MIME ni du contenu — seule l'extension d'origine est conservée telle quelle.
 - La lecture renvoie `Content-Disposition: inline` avec un `Content-Type` déduit par `Files.probeContentType` : un `.html` ou `.svg` uploadé est **servi et exécuté sur l'origine de l'API** → XSS stocké.
-- `DELETE /api/files/{filename}` ([ligne 141](backend/src/main/java/com/project/RecyConnect/Controller/FileController.java#L141)) : tout utilisateur authentifié peut supprimer **n'importe quel fichier**, y compris les images des produits d'autrui.
+- `DELETE /api/files/{filename}` ([ligne 141](src/main/java/com/project/RecyConnect/Controller/FileController.java#L141)) : tout utilisateur authentifié peut supprimer **n'importe quel fichier**, y compris les images des produits d'autrui.
 - `uploadPath.resolve(filename).normalize()` n'est pas suivi d'une vérification `startsWith(uploadPath)`. Le `StrictHttpFirewall` de Spring Security bloque aujourd'hui les `..` dans l'URL, mais la défense en profondeur manque.
 
 **Correction :** liste blanche d'extensions et de types MIME, `Content-Disposition: attachment`, contrôle de propriété sur la suppression, et validation explicite du chemin résolu.
@@ -300,7 +300,7 @@ Le contrôleur autorise l'acheteur **ou** le vendeur. Un acheteur peut donc pass
 
 ### M9. OTP : pas de limitation, pas de consommation, générateur non sécurisé
 
-[PhoneVerificationService.java](backend/src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java)
+[PhoneVerificationService.java](src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java)
 
 - `new Random()` (ligne 29) au lieu de `SecureRandom` : générateur prédictible pour un secret d'authentification.
 - Aucune limite de tentatives : un code à 6 chiffres se brute-force en ~1 M de requêtes, sans throttling.
@@ -312,7 +312,7 @@ Le contrôleur autorise l'acheteur **ou** le vendeur. Un acheteur peut donc pass
 
 ### M10. Validation du numéro incohérente avec sa documentation
 
-[PhoneVerificationService.java:178-188](backend/src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java#L178-L188)
+[PhoneVerificationService.java:178-188](src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java#L178-L188)
 
 ```java
 /**
@@ -331,7 +331,7 @@ Corollaire : le bloc `startsWith("222")` des lignes 121-124 est du code mort, pu
 
 ### M11. Les échecs d'envoi SMS sont silencieux
 
-[PhoneVerificationService.java:223-228](backend/src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java#L223-L228)
+[PhoneVerificationService.java:223-228](src/main/java/com/project/RecyConnect/Service/PhoneVerificationService.java#L223-L228)
 
 ```java
 } catch (Exception e) {
@@ -347,7 +347,7 @@ Si l'API SMS est en panne, le code est quand même enregistré et l'API répond 
 
 ### M12. Schéma de base géré par `ddl-auto=update`
 
-[application.properties:10](backend/src/main/resources/application.properties#L10), [application-prod.properties:13](backend/src/main/resources/application-prod.properties#L13), [docker-compose.yml:37](backend/docker-compose.yml#L37)
+[application.properties:10](src/main/resources/application.properties#L10), [application-prod.properties:13](src/main/resources/application-prod.properties#L13), [docker-compose.yml:37](docker-compose.yml#L37)
 
 Hibernate génère le schéma en production. Aucun outil de migration (Flyway/Liquibase). `update` n'applique jamais de suppression ni de modification de colonne : le schéma dérive silencieusement et les évolutions deviennent irréversibles et non traçables.
 
@@ -357,7 +357,7 @@ Hibernate génère le schéma en production. Aucun outil de migration (Flyway/Li
 
 ### M13. Mot de passe par défaut dans Docker Compose
 
-[docker-compose.yml:12,35](backend/docker-compose.yml#L12) — `${DB_PASSWORD:-securepassword123}`. Le fallback fait qu'un `docker compose up` sans `.env` démarre avec un mot de passe connu, sur un port `5432` publié sur l'hôte. Il faut retirer le défaut pour que le démarrage échoue explicitement si la variable manque, et ne pas exposer le port de la base.
+[docker-compose.yml:12,35](docker-compose.yml#L12) — `${DB_PASSWORD:-securepassword123}`. Le fallback fait qu'un `docker compose up` sans `.env` démarre avec un mot de passe connu, sur un port `5432` publié sur l'hôte. Il faut retirer le défaut pour que le démarrage échoue explicitement si la variable manque, et ne pas exposer le port de la base.
 
 ---
 
@@ -367,28 +367,28 @@ Hibernate génère le schéma en production. Aucun outil de migration (Flyway/Li
 
 | # | Constat | Emplacement |
 |---|---|---|
-| R1 | **Aucune validation d'entrée** : la dépendance `spring-boot-starter-validation` est absente, aucun `@Valid` / `@NotNull` / `@Size` dans le projet. Toute la validation est manuelle et incomplète. | [pom.xml](backend/pom.xml) |
+| R1 | **Aucune validation d'entrée** : la dépendance `spring-boot-starter-validation` est absente, aucun `@Valid` / `@NotNull` / `@Size` dans le projet. Toute la validation est manuelle et incomplète. | [pom.xml](pom.xml) |
 | R2 | **Aucun `@ControllerAdvice`** : les `RuntimeException` non capturées remontent en 500 avec une trace par défaut. Les `catch (RuntimeException)` renvoient souvent `404` là où `400`/`403` conviendrait (ex. `NegotiationController.patch`). | tout le projet |
 | R3 | **Aucune pagination** : `findAll()` charge intégralement les tables `products`, `negotiations`, `notifications`, `users`. Ne tient pas la montée en charge. | tous les services |
-| R4 | `updateQuantity` : NPE si `quantityAvailable` est `null`, et aucune borne inférieure — la quantité peut devenir négative. | [ProductService.java:161-172](backend/src/main/java/com/project/RecyConnect/Service/ProductService.java#L161-L172) |
-| R5 | `ProductService.update` écrase tous les champs sans test de nullité : un `PUT` partiel efface les données absentes du corps. | [ProductService.java:123-137](backend/src/main/java/com/project/RecyConnect/Service/ProductService.java#L123-L137) |
-| R6 | `POST /api/products/{id}/accept-offer` décrémente le stock hors du flux de négociation : pas de verrou pessimiste, pas de mise à jour du statut de l'offre. Doublonne `acceptBySeller` avec des garanties moindres. | [ProductController.java:124-146](backend/src/main/java/com/project/RecyConnect/Controller/ProductController.java#L124-L146) |
-| R7 | `adminUpdateProduct` : le commentaire annonce « Admin peut tout modifier, y compris changer le propriétaire », mais `service.update()` ne touche ni `user` ni `category`. Fonctionnalité annoncée non implémentée. | [ProductController.java:183](backend/src/main/java/com/project/RecyConnect/Controller/ProductController.java#L183) |
-| R8 | `JwtRequestFilter` : en cas de token invalide ou de session non concordante, la requête continue **sans authentification** au lieu de renvoyer 401. Sur une route publique en GET, l'appel réussit silencieusement — comportement difficile à diagnostiquer côté client. | [JwtRequestFilter.java:51-94](backend/src/main/java/com/project/RecyConnect/Config/JwtRequestFilter.java#L51-L94) |
-| R9 | `sendBroadcastToAllUsers` : boucle de `save()` unitaires, sans `@Transactional` ni traitement par lot. Sur 10 000 utilisateurs, 10 000 INSERT et un échec à mi-parcours laisse un état partiel. | [NotificationService.java:217-235](backend/src/main/java/com/project/RecyConnect/Service/NotificationService.java#L217-L235) |
-| R10 | `httpBasic()` activé en plus du JWT : second chemin d'authentification non nécessaire, à retirer. | [WebSecurityConfiguration.java:63](backend/src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L63) |
-| R11 | DSL Spring Security en chaîne (`.csrf().disable().and()...`) dépréciée depuis 6.1, supprimée en 7.0. Migrer vers la forme lambda. | [WebSecurityConfiguration.java:29-64](backend/src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L29-L64) |
+| R4 | `updateQuantity` : NPE si `quantityAvailable` est `null`, et aucune borne inférieure — la quantité peut devenir négative. | [ProductService.java:161-172](src/main/java/com/project/RecyConnect/Service/ProductService.java#L161-L172) |
+| R5 | `ProductService.update` écrase tous les champs sans test de nullité : un `PUT` partiel efface les données absentes du corps. | [ProductService.java:123-137](src/main/java/com/project/RecyConnect/Service/ProductService.java#L123-L137) |
+| R6 | `POST /api/products/{id}/accept-offer` décrémente le stock hors du flux de négociation : pas de verrou pessimiste, pas de mise à jour du statut de l'offre. Doublonne `acceptBySeller` avec des garanties moindres. | [ProductController.java:124-146](src/main/java/com/project/RecyConnect/Controller/ProductController.java#L124-L146) |
+| R7 | `adminUpdateProduct` : le commentaire annonce « Admin peut tout modifier, y compris changer le propriétaire », mais `service.update()` ne touche ni `user` ni `category`. Fonctionnalité annoncée non implémentée. | [ProductController.java:183](src/main/java/com/project/RecyConnect/Controller/ProductController.java#L183) |
+| R8 | `JwtRequestFilter` : en cas de token invalide ou de session non concordante, la requête continue **sans authentification** au lieu de renvoyer 401. Sur une route publique en GET, l'appel réussit silencieusement — comportement difficile à diagnostiquer côté client. | [JwtRequestFilter.java:51-94](src/main/java/com/project/RecyConnect/Config/JwtRequestFilter.java#L51-L94) |
+| R9 | `sendBroadcastToAllUsers` : boucle de `save()` unitaires, sans `@Transactional` ni traitement par lot. Sur 10 000 utilisateurs, 10 000 INSERT et un échec à mi-parcours laisse un état partiel. | [NotificationService.java:217-235](src/main/java/com/project/RecyConnect/Service/NotificationService.java#L217-L235) |
+| R10 | `httpBasic()` activé en plus du JWT : second chemin d'authentification non nécessaire, à retirer. | [WebSecurityConfiguration.java:63](src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L63) |
+| R11 | DSL Spring Security en chaîne (`.csrf().disable().and()...`) dépréciée depuis 6.1, supprimée en 7.0. Migrer vers la forme lambda. | [WebSecurityConfiguration.java:29-64](src/main/java/com/project/RecyConnect/Config/WebSecurityConfiguration.java#L29-L64) |
 
 ### Performance
 
 | # | Constat | Emplacement |
 |---|---|---|
-| P1 | `search()` charge **toute** la table produits puis filtre en mémoire (4 `filter` successifs). À remplacer par une requête JPQL ou une `Specification`. | [ProductService.java:93-102](backend/src/main/java/com/project/RecyConnect/Service/ProductService.java#L93-L102) |
+| P1 | `search()` charge **toute** la table produits puis filtre en mémoire (4 `filter` successifs). À remplacer par une requête JPQL ou une `Specification`. | [ProductService.java:93-102](src/main/java/com/project/RecyConnect/Service/ProductService.java#L93-L102) |
 | P2 | Même schéma dans `findByUserId`, `findByUserIdWithStatus` et `getUnreadNotifications` : filtrage post-chargement alors qu'une clause `WHERE` suffirait. `countUnreadByReceiverId` fait pourtant bien les choses — incohérence. | services |
-| P3 | Tous les `@ManyToOne` sont en `EAGER` (défaut JPA) : `Product` charge systématiquement `User` **et** `Category`. Un `findAll()` déclenche une cascade de requêtes (N+1). Passer en `LAZY` + `JOIN FETCH` ciblé. | [Product.java:35-41](backend/src/main/java/com/project/RecyConnect/Model/Product.java#L35-L41), [Negotiation.java:20-30](backend/src/main/java/com/project/RecyConnect/Model/Negotiation.java#L20-L30) |
-| P4 | `notifyOutbidUsers` rappelle `getQueueByProductId` (requête + tri) à chaque création/modification d'offre, puis envoie une notification par offre concurrente. Coût en O(n) requêtes et notifications à chaque enchère. | [NegotiationService.java:376-396](backend/src/main/java/com/project/RecyConnect/Service/NegotiationService.java#L376-L396) |
-| P5 | `notifyQueueUpdated` déclenche une notification « file mise à jour » à **chaque** événement d'offre, en plus des notifications métier. Génère du bruit et du volume FCM inutile. | [NegotiationService.java:398-412](backend/src/main/java/com/project/RecyConnect/Service/NegotiationService.java#L398-L412) |
-| P6 | `spring.jpa.show-sql=true` en développement : verbeux et coûteux. | [application.properties:11](backend/src/main/resources/application.properties#L11) |
+| P3 | Tous les `@ManyToOne` sont en `EAGER` (défaut JPA) : `Product` charge systématiquement `User` **et** `Category`. Un `findAll()` déclenche une cascade de requêtes (N+1). Passer en `LAZY` + `JOIN FETCH` ciblé. | [Product.java:35-41](src/main/java/com/project/RecyConnect/Model/Product.java#L35-L41), [Negotiation.java:20-30](src/main/java/com/project/RecyConnect/Model/Negotiation.java#L20-L30) |
+| P4 | `notifyOutbidUsers` rappelle `getQueueByProductId` (requête + tri) à chaque création/modification d'offre, puis envoie une notification par offre concurrente. Coût en O(n) requêtes et notifications à chaque enchère. | [NegotiationService.java:376-396](src/main/java/com/project/RecyConnect/Service/NegotiationService.java#L376-L396) |
+| P5 | `notifyQueueUpdated` déclenche une notification « file mise à jour » à **chaque** événement d'offre, en plus des notifications métier. Génère du bruit et du volume FCM inutile. | [NegotiationService.java:398-412](src/main/java/com/project/RecyConnect/Service/NegotiationService.java#L398-L412) |
+| P6 | `spring.jpa.show-sql=true` en développement : verbeux et coûteux. | [application.properties:11](src/main/resources/application.properties#L11) |
 
 ### Qualité et maintenance
 
@@ -403,7 +403,7 @@ Hibernate génère le schéma en production. Aucun outil de migration (Flyway/Li
 | Q7 | Aucune contrainte d'unicité en base sur `username` ni `phone` — seulement des vérifications applicatives sujettes aux conditions de course (deux inscriptions simultanées passent). |
 | Q8 | Packages en PascalCase (`Controller`, `Service`, `Model`, `DTO`) au lieu de la convention Java en minuscules. `UserRepo` détonne face aux autres `*Repository`. |
 | Q9 | `upload-multiple` construit ses URLs avec `http://localhost:` en dur, alors que `upload` utilise `serverUrl` — les fichiers multiples sont inaccessibles depuis un client distant. |
-| Q10 | `backend/uploads/0a344234-....jpg` est versionné dans Git. Le dossier d'uploads doit être dans `.gitignore`. |
+| Q10 | `uploads/0a344234-....jpg` est versionné dans Git. Le dossier d'uploads doit être dans `.gitignore`. |
 | Q11 | `pom.xml` : métadonnées laissées au modèle par défaut (`<description>Demo project for Spring Boot</description>`, balises `<licenses>`, `<developers>`, `<scm>` vides). |
 | Q12 | [API_USER_ACCESS.md](API_USER_ACCESS.md) documente des endpoints inexistants : `POST /api/users/{id}/fcm-token` et `/api/admin/categories`. Le fichier affirme aussi que « Spring Security bloque ces requêtes » pour les catégories, ce que la configuration ne fait pas (voir M6). |
 | Q13 | `README.md` fait 2 lignes : ni prérequis, ni procédure de démarrage, ni variables d'environnement requises. |
