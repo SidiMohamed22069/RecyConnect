@@ -38,6 +38,8 @@ src/main/resources/application.properties
 
 ### Firebase credentials ###
 src/main/resources/service-account-key.json
+### Secrets montes dans le conteneur (cle de service Firebase, etc.) ###
+secrets/
 
 ### Variables d'environnement ###
 .env

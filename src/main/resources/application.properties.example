@@ -18,6 +18,9 @@ spring.jpa.show-sql=false
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.properties.hibernate.format_sql=false
 spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+# Les controleurs ne renvoient que des DTO: aucune association lazy n'est
+# resolue pendant le rendu de la reponse.
+spring.jpa.open-in-view=false
 
 # --- Securite JWT ---
 # OBLIGATOIRE. Minimum 32 octets. Generer avec: openssl rand -base64 48
@@ -43,5 +46,9 @@ sms.chinguisoft.base-url=${SMS_BASE_URL:https://chinguisoft.com/api/sms/validati
 sms.chinguisoft.lang=fr
 
 # --- Firebase Cloud Messaging ---
+# En local, deposer la cle dans src/main/resources/ (fichier gitignore).
+# Un chemin sans prefixe est lu dans le classpath; utiliser "file:/chemin/absolu.json"
+# pour lire hors du classpath (c'est ce que fait le profil prod).
+# Laisser vide desactive proprement les notifications push.
 fcm.service-account-key=${FCM_SERVICE_ACCOUNT_KEY:service-account-key.json}
 fcm.project-id=${FCM_PROJECT_ID:}
