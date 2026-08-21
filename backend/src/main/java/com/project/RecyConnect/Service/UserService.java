@@ -1,6 +1,5 @@
 package com.project.RecyConnect.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -35,8 +34,9 @@ public class UserService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User optionalUser = userRepository.findByUsername(username);
         if(optionalUser==null) throw new UsernameNotFoundException("Username not found", null);
-        return new org.springframework.security.core.userdetails.User(optionalUser.getUsername(), optionalUser.getPassword()
-                , new ArrayList<>());
+        // Retourner l'entite User: elle implemente UserDetails et expose les autorites
+        // (ROLE_USER / ROLE_ADMIN) necessaires aux controles hasRole(...) et @PreAuthorize.
+        return optionalUser;
     }
 
     private UserDTO toDTO(User u) {

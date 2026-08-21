@@ -31,17 +31,21 @@ public class AdminNotificationController {
     }
     
     /**
-     * Endpoint pour tester FCM - envoie une notification de test à un utilisateur
+     * Endpoint pour tester FCM - envoie une notification de test à un utilisateur.
+     * Reserve aux admins: permet d'emettre un push vers n'importe quel utilisateur.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/test-fcm/{userId}")
     public ResponseEntity<String> testFcm(@PathVariable Long userId) {
         String result = fcmService.testFcmConnection(userId);
         return ResponseEntity.ok(result);
     }
-    
+
     /**
-     * Endpoint pour vérifier le statut de la config FCM
+     * Endpoint pour vérifier le statut de la config FCM.
+     * Reserve aux admins: expose des details de configuration interne.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/fcm-status")
     public ResponseEntity<String> getFcmStatus() {
         String status = fcmService.getFcmStatus();

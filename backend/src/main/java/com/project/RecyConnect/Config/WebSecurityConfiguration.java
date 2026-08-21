@@ -27,40 +27,38 @@ public class WebSecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf()
-                .disable()
+                // API stateless authentifiee par JWT: pas de cookie de session, donc pas de CSRF.
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authorizeHttpRequests()
-                // Permettre l'accès public aux endpoints d'authentification
-                .requestMatchers("/api/auth/**", "/ws/**", "/error", "/favicon.ico")
-                .permitAll()
-                // Endpoints de test FCM (pour debug)
-                .requestMatchers("/api/admin/notifications/fcm-status", "/api/admin/notifications/test-fcm/**")
-                .permitAll()
-                // Endpoints FCM test complets
-                .requestMatchers("/api/fcm-test/**")
-                .permitAll()
-                // Endpoints admin uniquement
-                .requestMatchers("/api/auth/register-admin").hasRole("ADMIN")
-                .requestMatchers("/api/products/admin/**").hasRole("ADMIN")
-                // Permettre l'accès public uniquement aux GET (lecture)
-                .requestMatchers(HttpMethod.GET, 
-                                "/api/categories/**", 
-                                "/api/products", "/api/products/{id}", 
+                .authorizeHttpRequests(auth -> auth
+                        // --- Endpoints admin (declares AVANT les regles plus larges) ---
+                        .requestMatchers("/api/auth/register-admin").hasRole("ADMIN")
+                        .requestMatchers("/api/products/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/fcm-test/**").hasRole("ADMIN")
+
+                        // --- Endpoints publics ---
+                        // La poignee de main STOMP est publique, l'authentification du
+                        // WebSocket est assuree par WebSocketAuthInterceptor (commande CONNECT).
+                        .requestMatchers("/api/auth/**", "/ws/**", "/error", "/favicon.ico")
+                        .permitAll()
+
+                        // --- Lecture publique: uniquement le catalogue ---
+                        // Volontairement retires de cette liste:
+                        //  - /api/notifications/**  : boites de reception privees
+                        //  - /api/negotiations/**   : prix et volumes commerciaux
+                        //  - /api/users/**          : donnees personnelles, enumeration de numeros
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/categories/**",
+                                "/api/products", "/api/products/{id}",
                                 "/api/products/search", "/api/products/category/**", "/api/products/user/**",
-                                "/api/negotiations", "/api/negotiations/{id}", "/api/negotiations/product/**",
-                                "/api/negotiations/sender/**", "/api/negotiations/receiver/**",
-                                "/api/users/{id}", "/api/users/by-phone/**", "/api/users/{id}/stats",
-                                "/api/notifications/**", "/api/phone-verification/**", "/api/files/{filename:.+}")
-                .permitAll()
-                // Tous les autres endpoints (POST/PUT/PATCH/DELETE) nécessitent l'authentification
-                .anyRequest()
-                .authenticated()
-                .and()
-                .httpBasic();
+                                "/api/files/{filename:.+}")
+                        .permitAll()
+
+                        // Tout le reste exige une authentification
+                        .anyRequest().authenticated()
+                );
         return http.build();
     }
 

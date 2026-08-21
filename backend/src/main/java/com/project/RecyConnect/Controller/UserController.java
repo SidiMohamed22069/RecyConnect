@@ -8,6 +8,7 @@ import com.project.RecyConnect.Model.UserSession;
 import com.project.RecyConnect.Security.JwtUtil;
 import com.project.RecyConnect.Service.UserService;
 import com.project.RecyConnect.Service.UserSessionService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,9 @@ public class UserController {
         this.userSessionService = userSessionService;
     }
 
+    /** Lister tous les comptes est une operation d'administration. */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<UserDTO> getAll() { return service.findAll(); }
 
     @GetMapping("/{id}")
@@ -40,10 +43,15 @@ public class UserController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public UserDTO create(@RequestBody UserDTO dto) { return service.save(dto); }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserDTO> update(@PathVariable Long id, @RequestBody UserDTO dto) {
+    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody UserDTO dto) {
+        ResponseEntity<?> denied = denyIfNotSelfOrAdmin(id);
+        if (denied != null) {
+            return denied;
+        }
         try {
             return ResponseEntity.ok(service.update(id, dto));
         } catch (RuntimeException e) {
@@ -53,6 +61,10 @@ public class UserController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<?> patch(@PathVariable Long id, @RequestBody UserDTO dto) {
+        ResponseEntity<?> denied = denyIfNotSelfOrAdmin(id);
+        if (denied != null) {
+            return denied;
+        }
         try {
             User updatedUser = service.patchAndGetUser(id, dto);
             
@@ -83,10 +95,39 @@ public class UserController {
         }
     }
 
+    /**
+     * Suppression d'un compte.
+     * ATTENTION: l'entite User cascade sur products / negotiationsSent /
+     * negotiationsReceived, la suppression est donc destructrice au-dela du compte.
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        ResponseEntity<?> denied = denyIfNotSelfOrAdmin(id);
+        if (denied != null) {
+            return denied;
+        }
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Autorise l'operation uniquement si l'appelant agit sur son propre compte,
+     * ou s'il est administrateur.
+     *
+     * @return null si l'operation est autorisee, sinon la reponse d'erreur a renvoyer.
+     */
+    private ResponseEntity<?> denyIfNotSelfOrAdmin(Long targetUserId) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isSelf = currentUser.getId().equals(targetUserId);
+        if (!isAdmin && !isSelf) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "You can only modify your own account"));
+        }
+        return null;
     }
 
     @GetMapping("/by-phone/{phone}")

@@ -48,10 +48,10 @@ public class AuthController {
     @PostMapping("/send-code")
     public ResponseEntity<?> sendVerificationCode(@RequestBody AuthDTO.SendCodeRequest request) {
         try {
-            String code = phoneVerificationService.sendVerificationCode(request.getPhone(), request.getIsForgetPassword());
-            // En production, ne pas retourner le code dans la réponse !
+            // Le code n'est JAMAIS renvoye dans la reponse: il ne doit transiter que par SMS.
+            phoneVerificationService.sendVerificationCode(request.getPhone(), request.getIsForgetPassword());
             return ResponseEntity.ok(new AuthDTO.AuthResponse(
-                    "Code de vérification envoyé. Code (dev only): " + code));
+                    "Code de vérification envoyé par SMS."));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new AuthDTO.AuthResponse(e.getMessage()));
@@ -96,7 +96,7 @@ public class AuthController {
         // Si aucun code n'est fourni, envoyer le SMS et demander la saisie du code
         if (request.getVerificationCode() == null || request.getVerificationCode().isEmpty()) {
             try {
-                String code = phoneVerificationService.sendVerificationCode(request.getPhone(), false);
+                phoneVerificationService.sendVerificationCode(request.getPhone(), false);
                 return ResponseEntity.status(HttpStatus.ACCEPTED)
                         .body(new AuthDTO.AuthResponse("Code de vérification envoyé. Veuillez saisir le code reçu par SMS."));
             } catch (RuntimeException e) {
@@ -119,10 +119,10 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
-        // Vérifier le code avec le numéro sans préfixe 222 (comme stocké dans la base)
-        boolean isCodeValid = phoneVerificationService.verifyCodeBeforeRegistration(
+        // Vérifier ET consommer le code (usage unique) avec le numéro sans préfixe 222
+        boolean isCodeValid = phoneVerificationService.consumeCode(
            phoneNumberToSave, request.getVerificationCode());
-        
+
         if (!isCodeValid) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Code de vérification invalide ou expiré"));
@@ -141,17 +141,14 @@ public class AuthController {
         }
 
         // Create new user avec le numéro sans préfixe 222
-        // Définir le rôle (USER par défaut, ADMIN si spécifié)
-        Role userRole = Role.USER;
-        if (request.getRole() != null && request.getRole().equalsIgnoreCase("ADMIN")) {
-            userRole = Role.ADMIN;
-        }
-        
+        // Le role est TOUJOURS USER: le champ "role" du corps de requete est ignore.
+        // La creation d'un administrateur passe exclusivement par /api/auth/register-admin,
+        // qui exige deja un appelant authentifie ayant le role ADMIN.
         User user = User.builder()
             .username(request.getUsername())
             .pwd(passwordEncoder.encode(request.getPassword()))
             .phone(phoneNumberToSave)
-            .role(userRole)
+            .role(Role.USER)
             .imageData(User.DEFAULT_IMAGE_DATA)
             .build();
 
@@ -351,7 +348,7 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
 
-        boolean isCodeValid = phoneVerificationService.verifyCodeBeforeRegistration(
+        boolean isCodeValid = phoneVerificationService.consumeCode(
                 phoneToSearch, request.getVerificationCode());
 
         if (!isCodeValid) {

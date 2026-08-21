@@ -5,9 +5,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,9 +20,34 @@ import java.util.function.Function;
 
 @Component
 public class JwtUtil {
-    private static final String SECRET = "5367566859703373367639792F423F4528482840625165546857605A71347437536756685970337336763979hgchggfghjrtyu";
+
+    /** Taille minimale de cle imposee par HMAC-SHA256 (256 bits). */
+    private static final int MIN_SECRET_BYTES = 32;
+
+    /**
+     * Secret de signature, fourni par la configuration (variable d'environnement
+     * JWT_SECRET). Aucune valeur par defaut: l'application doit refuser de
+     * demarrer plutot que de signer avec un secret connu.
+     */
+    private final Key signingKey;
+
+    /** Duree de validite d'un token, en minutes. */
+    private final long expirationMinutes;
+
     private final Set<String> invalidatedTokens = ConcurrentHashMap.newKeySet();
-    
+
+    public JwtUtil(@Value("${jwt.secret}") String secret,
+                   @Value("${jwt.expiration-minutes:1380}") long expirationMinutes) {
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "jwt.secret doit faire au moins " + MIN_SECRET_BYTES + " octets (256 bits) pour HS256");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+        this.expirationMinutes = expirationMinutes;
+    }
+
+
     public String generateToken(String userName) {
         Map<String, Object> claims = new HashMap<>();
         return createToken(claims, userName);
@@ -45,12 +72,13 @@ public class JwtUtil {
     }
 
     private String createToken(Map<String, Object> claims, String userName) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userName)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 23)) // 23 heures expiration
-                .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + expirationMinutes * 60_000L))
+                .signWith(signingKey, SignatureAlgorithm.HS256).compact();
     }
 
     public void expireToken(String token) {
@@ -58,8 +86,7 @@ public class JwtUtil {
     }
 
     private Key getSignKey() {
-        byte[] keyBytes = SECRET.getBytes();
-        return Keys.hmacShaKeyFor(keyBytes);
+        return signingKey;
     }
 
     public String extractEmail(String token) {

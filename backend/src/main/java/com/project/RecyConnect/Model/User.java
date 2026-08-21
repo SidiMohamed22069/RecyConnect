@@ -52,7 +52,10 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        // Un role absent en base ne doit pas faire echouer l'authentification:
+        // on retombe sur le role le moins privilegie.
+        Role effectiveRole = role != null ? role : Role.USER;
+        return List.of(new SimpleGrantedAuthority("ROLE_" + effectiveRole.name()));
     }
 
     @Override
