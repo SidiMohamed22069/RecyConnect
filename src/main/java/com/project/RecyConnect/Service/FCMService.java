@@ -17,48 +17,74 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
+import java.io.InputStream;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class FCMService {
-    
+
+    // Accepte un prefixe Spring: "file:/app/secrets/xxx.json" (prod, monte en volume)
+    // ou "classpath:xxx.json" (dev). Sans prefixe, la valeur est resolue dans le classpath.
     @Value("${fcm.service-account-key:}")
     private String serviceAccountKeyPath;
-    
+
     @Value("${fcm.project-id:}")
     private String projectId;
-    
+
     private final UserRepo userRepo;
     private final UserSessionRepository userSessionRepository;
-    
-    public FCMService(UserRepo userRepo, UserSessionRepository userSessionRepository) {
+    private final ResourceLoader resourceLoader;
+
+    public FCMService(UserRepo userRepo, UserSessionRepository userSessionRepository, ResourceLoader resourceLoader) {
         this.userRepo = userRepo;
         this.userSessionRepository = userSessionRepository;
+        this.resourceLoader = resourceLoader;
     }
-    
+
     @PostConstruct
     public void initialize() {
-        // Note: Vous devez configurer Firebase avec votre fichier service-account.json
-        // Pour l'instant, on laisse vide - vous devrez ajouter la configuration
-        try {
-            if (serviceAccountKeyPath != null && !serviceAccountKeyPath.isEmpty()) {
-                ClassPathResource resource = new ClassPathResource(serviceAccountKeyPath);
-                GoogleCredentials credentials = GoogleCredentials.fromStream(resource.getInputStream());
-                FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(credentials)
-                    .setProjectId(projectId)
-                    .build();
-                if (FirebaseApp.getApps().isEmpty()) {
-                    FirebaseApp.initializeApp(options);
-                }
+        if (serviceAccountKeyPath == null || serviceAccountKeyPath.isBlank()) {
+            log.warn("FCM desactive: la propriete fcm.service-account-key n'est pas renseignee. "
+                    + "Aucune notification push ne sera envoyee.");
+            return;
+        }
+
+        // Sans prefixe explicite, le ResourceLoader d'une application web resout le chemin
+        // dans le ServletContext et non dans le classpath: on force "classpath:".
+        String location = serviceAccountKeyPath.contains(":")
+                ? serviceAccountKeyPath
+                : ResourceLoader.CLASSPATH_URL_PREFIX + serviceAccountKeyPath;
+
+        // isReadable() ecarte aussi le repertoire vide que Docker cree a la place
+        // d'un bind mount dont le fichier hote est absent.
+        Resource resource = resourceLoader.getResource(location);
+        if (!resource.exists() || !resource.isReadable()) {
+            log.error("FCM desactive: cle de service Firebase illisible ou absente a l'emplacement '{}'. "
+                    + "Aucune notification push ne sera envoyee.", location);
+            return;
+        }
+
+        try (InputStream keyStream = resource.getInputStream()) {
+            GoogleCredentials credentials = GoogleCredentials.fromStream(keyStream);
+            FirebaseOptions options = FirebaseOptions.builder()
+                .setCredentials(credentials)
+                .setProjectId(projectId)
+                .build();
+            if (FirebaseApp.getApps().isEmpty()) {
+                FirebaseApp.initializeApp(options);
             }
+            log.info("Firebase initialise pour le projet '{}'.", projectId);
         } catch (IOException e) {
-            System.err.println("Erreur lors de l'initialisation de Firebase: " + e.getMessage());
-            // L'application peut continuer sans FCM si non configuré
+            // L'application peut continuer sans FCM si non configure.
+            log.error("FCM desactive: echec de l'initialisation de Firebase depuis '{}'.", location, e);
         }
     }
     
