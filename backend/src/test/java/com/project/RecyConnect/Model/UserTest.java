@@ -65,13 +65,17 @@ class UserTest {
 
     // ==================== Tests pour getAuthorities() ====================
 
+    // Le prefixe "ROLE_" est la convention Spring Security: hasRole('ADMIN')
+    // correspond a l'autorite "ROLE_ADMIN". Sans ce prefixe, tous les controles
+    // de role echouent silencieusement.
+
     @Test
     void testGetAuthorities_ReturnsUserRole() {
         Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
-        
+
         assertNotNull(authorities);
         assertEquals(1, authorities.size());
-        assertTrue(authorities.contains(new SimpleGrantedAuthority("USER")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_USER")));
     }
 
     @Test
@@ -80,18 +84,29 @@ class UserTest {
                 .username("admin")
                 .role(Role.ADMIN)
                 .build();
-        
+
         Collection<? extends GrantedAuthority> authorities = admin.getAuthorities();
-        
+
         assertNotNull(authorities);
         assertEquals(1, authorities.size());
-        assertTrue(authorities.contains(new SimpleGrantedAuthority("ADMIN")));
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_ADMIN")));
     }
 
     @Test
     void testGetAuthorities_ReturnsListOfOneAuthority() {
         Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
         assertEquals(1, authorities.size());
+    }
+
+    @Test
+    void testGetAuthorities_WithNullRole_FallsBackToUser() {
+        User sansRole = User.builder().username("sansrole").build();
+
+        Collection<? extends GrantedAuthority> authorities = sansRole.getAuthorities();
+
+        assertNotNull(authorities);
+        assertEquals(1, authorities.size());
+        assertTrue(authorities.contains(new SimpleGrantedAuthority("ROLE_USER")));
     }
 
     // ==================== Tests pour isAccountNonExpired() ====================
