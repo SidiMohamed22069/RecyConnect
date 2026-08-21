@@ -1,130 +1,158 @@
-# APIs Accessibles aux Utilisateurs avec le Rôle USER
+# Droits d'accès par endpoint
 
-## 🔓 Endpoints Publics (Accessibles sans authentification)
+Référence détaillée des autorisations. Pour une vue d'ensemble, voir [README.md](README.md).
 
-### Authentification (`/api/auth/**`)
-- `POST /api/auth/send-code` - Envoyer un code de vérification
-- `POST /api/auth/verify-code` - Vérifier le code
-- `POST /api/auth/register` - Créer un compte
-- `POST /api/auth/login` - Se connecter
-- `POST /api/auth/logout` - Se déconnecter
-- `GET /api/auth/me` - Obtenir les informations de l'utilisateur connecté
+Source de vérité : `Config/WebSecurityConfiguration.java`, complété par les annotations
+`@PreAuthorize` sur les contrôleurs et par les contrôles de propriété codés dans les
+méthodes.
 
-### Catégories (`/api/categories/**`)
-- `GET /api/categories` - Lister toutes les catégories
-- `GET /api/categories/{id}` - Obtenir une catégorie par ID
-
-### Produits (`/api/products`)
-- `GET /api/products` - Lister tous les produits
-- `GET /api/products/{id}` - Obtenir un produit par ID
-- `GET /api/products/search` - Rechercher des produits
-- `GET /api/products/category/{categoryId}` - Obtenir les produits d'une catégorie
-- `GET /api/products/user/{userId}` - Obtenir les produits d'un utilisateur
-- `GET /api/products/user/{userId}/status` - Obtenir les produits d'un utilisateur par statut
-
-### Négociations (`/api/negotiations`)
-- `GET /api/negotiations` - Lister toutes les négociations
-- `GET /api/negotiations/{id}` - Obtenir une négociation par ID
-- `GET /api/negotiations/product/{productId}` - Obtenir les négociations d'un produit
-- `GET /api/negotiations/sender/{senderId}` - Obtenir les négociations envoyées
-- `GET /api/negotiations/receiver/{receiverId}` - Obtenir les négociations reçues
-
-### Utilisateurs (`/api/users`)
-- `GET /api/users/{id}` - Obtenir un utilisateur par ID
-- `GET /api/users/by-phone/{phone}` - Obtenir un utilisateur par téléphone
-- `GET /api/users/{id}/stats` - Obtenir les statistiques d'un utilisateur
-
-### Notifications (`/api/notifications`)
-- `GET /api/notifications` - Lister toutes les notifications
-- `GET /api/notifications/{id}` - Obtenir une notification par ID
-- `GET /api/notifications/receiver/{receiverId}` - Obtenir les notifications d'un utilisateur
-- `GET /api/notifications/receiver/{receiverId}/unread` - Obtenir les notifications non lues
-- `GET /api/notifications/receiver/{receiverId}/unread/count` - Compter les notifications non lues
-
-### Fichiers (`/api/files`)
-- `GET /api/files/{filename}` - Télécharger un fichier
-
-### Vérification téléphone (`/api/phone-verification`)
-- `GET /api/phone-verification/**` - Endpoints de vérification (lecture uniquement)
+> **Mis à jour le 2026-08-21.** Ce document décrivait auparavant un modèle où les
+> notifications, les négociations et les profils utilisateurs étaient lisibles sans
+> authentification. Ces routes ont été fermées (voir [CODE_REVIEW.md](CODE_REVIEW.md), C7).
 
 ---
 
-## 🔐 Endpoints Authentifiés (Nécessitent un token JWT - Rôle USER)
+## Les trois niveaux
 
-### Produits (`/api/products`)
-- `POST /api/products` - **Créer un produit** (utilisateur connecté = propriétaire)
-- `PUT /api/products/{id}` - **Modifier un produit** (uniquement si propriétaire)
-- `PATCH /api/products/{id}` - **Modifier partiellement un produit** (uniquement si propriétaire)
-- `DELETE /api/products/{id}` - **Supprimer un produit** (uniquement si propriétaire)
-- `POST /api/products/{id}/accept-offer` - **Accepter une offre** (uniquement si propriétaire)
+| Niveau | Condition |
+|---|---|
+| 🔓 **Public** | Aucun token |
+| 🔐 **Authentifié** | En-têtes `Authorization: Bearer <token>` **et** `X-Device-Id` |
+| 👑 **Admin** | Authentifié avec le rôle `ADMIN` |
 
-### Négociations (`/api/negotiations`)
-- `POST /api/negotiations` - **Créer une négociation** (utilisateur connecté = expéditeur)
-- `PUT /api/negotiations/{id}` - **Modifier une négociation** (uniquement si expéditeur ou destinataire)
-- `PATCH /api/negotiations/{id}` - **Modifier partiellement une négociation** (uniquement si expéditeur ou destinataire)
-- `DELETE /api/negotiations/{id}` - **Supprimer une négociation** (uniquement si expéditeur ou destinataire)
-
-### Utilisateurs (`/api/users`)
-- `GET /api/users` - Lister tous les utilisateurs (nécessite authentification)
-- `PUT /api/users/{id}` - Modifier un utilisateur
-- `PATCH /api/users/{id}` - Modifier partiellement un utilisateur
-- `DELETE /api/users/{id}` - Supprimer un utilisateur
-- `POST /api/users/{id}/fcm-token` - Mettre à jour le token FCM
-
-### Notifications (`/api/notifications`)
-- `POST /api/notifications` - Créer une notification
-- `PUT /api/notifications/{id}` - Modifier une notification
-- `PATCH /api/notifications/{id}` - Modifier partiellement une notification
-- `PATCH /api/notifications/{id}/read` - Marquer comme lu
-- `DELETE /api/notifications/{id}` - Supprimer une notification
-
-### Catégories (`/api/categories`)
-- `POST /api/categories` - Créer une catégorie (réservé aux ADMIN via `/api/admin/categories`)
-- `PUT /api/categories/{id}` - Modifier une catégorie (réservé aux ADMIN via `/api/admin/categories`)
-- `PATCH /api/categories/{id}` - Modifier partiellement une catégorie (réservé aux ADMIN via `/api/admin/categories`)
-- `DELETE /api/categories/{id}` - Supprimer une catégorie (réservé aux ADMIN via `/api/admin/categories`)
-
-### Fichiers (`/api/files`)
-- `POST /api/files/upload` - **Uploader un fichier**
-- `POST /api/files/upload-multiple` - **Uploader plusieurs fichiers**
-- `DELETE /api/files/{filename}` - **Supprimer un fichier**
+Toute route non listée comme publique exige une authentification (`anyRequest().authenticated()`).
 
 ---
 
-## 🚫 Endpoints NON Accessibles aux Utilisateurs USER (Réservés aux ADMIN)
+## 🔓 Public
 
-### Admin Notifications (`/api/admin/notifications`)
-- `POST /api/admin/notifications/broadcast` - ❌ **RÉSERVÉ AUX ADMIN** - Envoyer une notification broadcast à tous les utilisateurs
+### Authentification — `/api/auth/**`
+
+| Méthode | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/send-code` | Envoyer un code de vérification par SMS |
+| POST | `/api/auth/verify-code` | Vérifier un code (sans le consommer) |
+| POST | `/api/auth/register` | Créer un compte |
+| POST | `/api/auth/login` | Se connecter |
+| POST | `/api/auth/logout` | Se déconnecter |
+| POST | `/api/auth/reset-password` | Réinitialiser le mot de passe |
+| GET | `/api/auth/me` | Profil du porteur du token |
+
+Le code de vérification **n'est jamais renvoyé dans la réponse** : il ne transite que
+par SMS. Le champ `role` de `/register` est ignoré ; tout compte créé est un `USER`.
+
+### Catalogue — lecture seule
+
+| Méthode | Endpoint |
+|---|---|
+| GET | `/api/categories` · `/api/categories/{id}` |
+| GET | `/api/products` · `/api/products/{id}` |
+| GET | `/api/products/search` |
+| GET | `/api/products/category/{categoryId}` |
+| GET | `/api/products/user/{userId}` · `/api/products/user/{userId}/status` |
+| GET | `/api/files/{filename}` |
+
+### WebSocket
+
+| Endpoint | Note |
+|---|---|
+| `/ws/**` | La poignée de main est publique. La frame STOMP **CONNECT** exige un JWT valide dans l'en-tête `Authorization`, et un client ne peut s'abonner qu'à `/user/{sonPropreId}/notifications` |
 
 ---
 
-## 📝 Notes Importantes
+## 🔐 Authentifié
 
-1. **Authentification** : 
-   - Tous les endpoints authentifiés nécessitent un header `Authorization: Bearer <token>`
-   - **Seuls les endpoints GET (lecture) sont publics** - tous les POST/PUT/PATCH/DELETE nécessitent l'authentification
-   - Si vous tentez d'accéder à un endpoint protégé sans token, vous recevrez une erreur `401 Unauthorized`
+### Produits
 
-2. **Permissions** :
-   - Un utilisateur ne peut modifier/supprimer que **ses propres produits**
-   - Un utilisateur ne peut modifier/supprimer que les négociations où il est **expéditeur OU destinataire**
-   - Si une tentative d'accès non autorisée est détectée, le serveur retourne :
-     - `401 Unauthorized` si non authentifié (pas de token ou token invalide)
-     - `403 Forbidden` si authentifié mais sans permission (utilisateur n'est pas propriétaire)
+| Méthode | Endpoint | Règle |
+|---|---|---|
+| POST | `/api/products` | L'utilisateur connecté devient propriétaire — inutile d'envoyer `userId` |
+| PUT · PATCH | `/api/products/{id}` | Propriétaire ou admin |
+| DELETE | `/api/products/{id}` | Propriétaire ou admin |
+| POST | `/api/products/{id}/accept-offer` | Propriétaire uniquement |
 
-3. **Création automatique** :
-   - Lors de la création d'un produit, l'utilisateur connecté est automatiquement défini comme propriétaire (vous n'avez pas besoin de spécifier `userId`)
-   - Lors de la création d'une négociation, l'utilisateur connecté est automatiquement défini comme expéditeur (vous n'avez pas besoin de spécifier `senderId`)
+### Négociations
 
-4. **Endpoints GET publics** : 
-   - Tous les endpoints de lecture (GET) sont publics pour permettre la consultation sans authentification
-   - Cela permet aux utilisateurs non connectés de parcourir les produits, négociations, etc.
+| Méthode | Endpoint | Règle |
+|---|---|---|
+| GET | `/api/negotiations` · `/{id}` | Authentifié |
+| GET | `/api/negotiations/sender/{id}` · `/receiver/{id}` · `/product/{id}` | Authentifié |
+| GET | `/api/negotiations/product/{id}/queue` | File des offres, classée par montant décroissant |
+| GET | `/api/negotiations/earnings/me` | Revenus de l'utilisateur connecté |
+| POST | `/api/negotiations` | L'utilisateur connecté devient expéditeur |
+| PUT | `/api/negotiations/{id}` | Expéditeur (acheteur) uniquement |
+| PATCH · DELETE | `/api/negotiations/{id}` | Expéditeur ou destinataire |
+| POST | `/api/negotiations/{id}/cancel` | Acheteur uniquement |
+| POST | `/api/negotiations/{id}/accept` · `/reject` | Vendeur uniquement |
 
-5. **Endpoints POST/PUT/DELETE protégés** :
-   - Tous les endpoints de modification (POST/PUT/PATCH/DELETE) nécessitent un token JWT valide
-   - Spring Security bloque ces requêtes au niveau du filtre de sécurité avant même d'atteindre le contrôleur
-   - Les contrôleurs vérifient également les permissions (propriétaire, expéditeur/destinataire)
+L'acceptation d'une offre décrémente le stock sous verrou pessimiste et annule
+automatiquement les offres devenues incompatibles avec la quantité restante.
 
-6. **WebSocket** : Les connexions WebSocket (`/ws/**`) sont publiques pour permettre les notifications en temps réel
+### Utilisateurs
 
+| Méthode | Endpoint | Règle |
+|---|---|---|
+| GET | `/api/users/{id}` · `/{id}/stats` · `/by-phone/{phone}` | Authentifié |
+| PUT · PATCH · DELETE | `/api/users/{id}` | **Son propre compte, ou admin** |
 
+⚠️ La suppression d'un compte est destructrice au-delà du compte : l'entité `User`
+cascade sur ses produits et ses négociations.
+
+### Notifications
+
+| Méthode | Endpoint |
+|---|---|
+| GET | `/api/notifications` · `/{id}` |
+| GET | `/api/notifications/receiver/{id}` · `/unread` · `/unread/count` |
+| POST · PUT · PATCH · DELETE | `/api/notifications` · `/{id}` |
+| PATCH | `/api/notifications/{id}/read` |
+
+### Catégories et fichiers
+
+| Méthode | Endpoint |
+|---|---|
+| POST · PUT · PATCH · DELETE | `/api/categories` · `/{id}` |
+| POST | `/api/files/upload` · `/api/files/upload-multiple` |
+| DELETE | `/api/files/{filename}` |
+
+---
+
+## 👑 Admin
+
+| Méthode | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register-admin` | Créer un administrateur |
+| GET | `/api/users` | Lister tous les comptes |
+| POST | `/api/users` | Créer un compte |
+| PUT | `/api/users/{id}/role` | Changer le rôle (`USER` / `ADMIN`) |
+| PUT | `/api/products/admin/{id}` | Modifier n'importe quel produit |
+| POST | `/api/admin/notifications/broadcast` | Notifier tous les utilisateurs |
+| GET | `/api/admin/notifications/fcm-status` · `/test-fcm/{userId}` | Diagnostic Firebase |
+| * | `/api/fcm-test/**` | Diagnostic Firebase détaillé |
+
+---
+
+## Codes de réponse
+
+| Code | Signification |
+|---|---|
+| `401` | Non authentifié : token absent, invalide, expiré, ou `X-Device-Id` ne correspondant pas à la session active |
+| `403` | Authentifié mais sans les droits (pas propriétaire, ou rôle insuffisant) |
+| `404` | Ressource inexistante |
+| `409` | Conflit : nom d'utilisateur ou numéro déjà utilisé |
+
+---
+
+## Limites connues
+
+Certaines routes de cette liste restent plus permissives qu'elles ne devraient. Elles
+sont recensées dans [CODE_REVIEW.md](CODE_REVIEW.md) :
+
+- **M5** — `PATCH /api/negotiations/{id}` accepte un `status` arbitraire : un acheteur
+  peut passer sa propre offre à `accepted` sans passer par le vendeur.
+- **M6** — les catégories sont modifiables et supprimables par tout utilisateur authentifié.
+- **M7** — `POST /api/notifications` accepte `senderId` et `receiverId` sans contrôle :
+  usurpation possible.
+- **M8** — `DELETE /api/files/{filename}` permet de supprimer le fichier de n'importe qui,
+  et les téléversements ne sont pas validés.
+- `GET /api/users/by-phone/{phone}` permet à tout compte authentifié d'énumérer les numéros.

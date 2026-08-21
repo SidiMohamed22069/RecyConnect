@@ -1,0 +1,47 @@
+# Modele de configuration locale.
+#   cp application.properties.example application.properties
+#
+# Ce fichier est versionne, application.properties ne l'est PAS.
+# N'y placer aucune valeur reelle de secret.
+
+spring.application.name=RecyConnect
+server.port=${SERVER_PORT:8081}
+
+# --- PostgreSQL ---
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/RecyConnect}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+
+# --- JPA ---
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=false
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+
+# --- Securite JWT ---
+# OBLIGATOIRE. Minimum 32 octets. Generer avec: openssl rand -base64 48
+jwt.secret=${JWT_SECRET}
+# Duree de validite d'un token en minutes (1380 = 23 h)
+jwt.expiration-minutes=${JWT_EXPIRATION_MINUTES:1380}
+
+# --- Upload de fichiers ---
+file.upload-dir=${FILE_UPLOAD_DIR:uploads}
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# --- URLs de l'application ---
+# app.client.url: origines autorisees par le CORS, separees par des virgules
+app.client.url=${APP_CLIENT_URL:http://localhost:4200}
+app.server.url=${APP_SERVER_URL:http://localhost}
+
+# --- SMS Chinguisoft ---
+sms.chinguisoft.validation-key=${SMS_VALIDATION_KEY}
+sms.chinguisoft.token=${SMS_TOKEN}
+sms.chinguisoft.base-url=${SMS_BASE_URL:https://chinguisoft.com/api/sms/validation}
+sms.chinguisoft.lang=fr
+
+# --- Firebase Cloud Messaging ---
+fcm.service-account-key=${FCM_SERVICE_ACCOUNT_KEY:service-account-key.json}
+fcm.project-id=${FCM_PROJECT_ID:}
