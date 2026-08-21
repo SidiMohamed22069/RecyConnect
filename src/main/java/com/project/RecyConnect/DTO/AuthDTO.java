@@ -28,7 +28,9 @@ public class AuthDTO {
         private String password;
         private String phone;
         private String verificationCode;
-        private String role; // optionnel, default "USER"
+        // IGNORE par /api/auth/register: tout compte cree est un USER.
+        // La creation d'un admin passe par /api/auth/register-admin.
+        private String role;
         private String deviceId;      // Identifiant unique de l'appareil
         private String fcmToken;      // Token FCM de l'appareil
         private String deviceName;    // Nom de l'appareil
