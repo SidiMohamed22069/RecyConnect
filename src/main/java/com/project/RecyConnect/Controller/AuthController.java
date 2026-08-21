@@ -1,0 +1,393 @@
+package com.project.RecyConnect.Controller;
+
+import java.util.Map;
+import java.util.Objects;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.project.RecyConnect.DTO.AuthDTO;
+import com.project.RecyConnect.Model.Role;
+import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Model.UserSession;
+import com.project.RecyConnect.Repository.UserRepo;
+import com.project.RecyConnect.Security.JwtUtil;
+import com.project.RecyConnect.Service.FCMService;
+import com.project.RecyConnect.Service.PhoneVerificationService;
+import com.project.RecyConnect.Service.UserSessionService;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final UserRepo userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
+    private final PhoneVerificationService phoneVerificationService;
+    private final UserSessionService userSessionService;
+    private final FCMService fcmService;
+
+    /**
+     * Étape 1: Envoyer un code de vérification au numéro de téléphone
+     */
+    @PostMapping("/send-code")
+    public ResponseEntity<?> sendVerificationCode(@RequestBody AuthDTO.SendCodeRequest request) {
+        try {
+            // Le code n'est JAMAIS renvoye dans la reponse: il ne doit transiter que par SMS.
+            phoneVerificationService.sendVerificationCode(request.getPhone(), request.getIsForgetPassword());
+            return ResponseEntity.ok(new AuthDTO.AuthResponse(
+                    "Code de vérification envoyé par SMS."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new AuthDTO.AuthResponse(e.getMessage()));
+        }
+    }
+
+    /**
+     * Étape 2: Vérifier le code de vérification
+     */
+    @PostMapping("/verify-code")
+    public ResponseEntity<?> verifyCode(@RequestBody AuthDTO.VerifyCodeRequest request) {
+        try {
+            // Enlever le préfixe 222 si présent
+            String phoneStr = request.getPhone();
+            Long phoneToVerify = Long.parseLong(phoneStr);
+            if (phoneStr.startsWith("222")) {
+                phoneToVerify = Long.parseLong(phoneStr.substring(3));
+            }
+            
+            boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
+                phoneToVerify, request.getCode());
+            
+            if (isValid) {
+                return ResponseEntity.ok(new AuthDTO.AuthResponse(
+                        "Code vérifié avec succès. Vous pouvez maintenant créer votre compte."));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new AuthDTO.AuthResponse("Code invalide ou expiré"));
+            }
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
+        }
+    }
+
+    /**
+     * Étape 3: Créer le compte après vérification du code
+     */
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody AuthDTO.RegisterRequest request) {
+
+        // Si aucun code n'est fourni, envoyer le SMS et demander la saisie du code
+        if (request.getVerificationCode() == null || request.getVerificationCode().isEmpty()) {
+            try {
+                phoneVerificationService.sendVerificationCode(request.getPhone(), false);
+                return ResponseEntity.status(HttpStatus.ACCEPTED)
+                        .body(new AuthDTO.AuthResponse("Code de vérification envoyé. Veuillez saisir le code reçu par SMS."));
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new AuthDTO.AuthResponse(e.getMessage()));
+            }
+        }
+
+        Long phoneNumberToSave;
+        try {
+            // Enlever le préfixe 222 pour la sauvegarde et la vérification
+            String phoneStr = request.getPhone();
+            Long phoneNumber = Long.parseLong(phoneStr);
+            if (phoneStr.startsWith("222")) {
+                phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
+            } else {
+                phoneNumberToSave = phoneNumber;
+            }
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
+        }
+        // Vérifier ET consommer le code (usage unique) avec le numéro sans préfixe 222
+        boolean isCodeValid = phoneVerificationService.consumeCode(
+           phoneNumberToSave, request.getVerificationCode());
+
+        if (!isCodeValid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Code de vérification invalide ou expiré"));
+        }
+
+        // Check if username already exists
+        if (userRepository.findByUsername(request.getUsername()) != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new AuthDTO.AuthResponse("Username already exists"));
+        }
+
+        // Check if phone already exists (vérifier avec le numéro sans préfixe)
+        if (userRepository.findByPhone(phoneNumberToSave) != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new AuthDTO.AuthResponse("Phone number already exists"));
+        }
+
+        // Create new user avec le numéro sans préfixe 222
+        // Le role est TOUJOURS USER: le champ "role" du corps de requete est ignore.
+        // La creation d'un administrateur passe exclusivement par /api/auth/register-admin,
+        // qui exige deja un appelant authentifie ayant le role ADMIN.
+        User user = User.builder()
+            .username(request.getUsername())
+            .pwd(passwordEncoder.encode(request.getPassword()))
+            .phone(phoneNumberToSave)
+            .role(Role.USER)
+            .imageData(User.DEFAULT_IMAGE_DATA)
+            .build();
+
+        User savedUser = userRepository.save(user);
+
+        // Nettoyer les codes de vérification expirés (avec le numéro sans préfixe 222)
+        phoneVerificationService.cleanupExpiredCodes(phoneNumberToSave);
+
+        String token;
+
+        // Appliquer la session unique si les infos appareil sont fournies
+        if (request.getFcmToken() != null && !request.getFcmToken().isEmpty()) {
+            if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new AuthDTO.AuthResponse("deviceId is required when fcmToken is provided"));
+            }
+
+            UserSessionService.SessionReplacementResult sessionResult = userSessionService.replaceSession(
+                savedUser.getId(),
+                request.getDeviceId(),
+                request.getDeviceName(),
+                request.getFcmToken()
+            );
+
+            UserSession session = sessionResult.session();
+            token = jwtUtil.generateToken(savedUser, session.getSessionVersion(), session.getDeviceId());
+
+            String previousFcmToken = sessionResult.previousFcmToken();
+            if (previousFcmToken != null && !Objects.equals(previousFcmToken, request.getFcmToken())) {
+                fcmService.sendForceLogoutToToken(previousFcmToken, "session_replaced");
+            }
+        } else {
+            token = jwtUtil.generateToken(savedUser);
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new AuthDTO.AuthResponse(token, savedUser.getId(), savedUser.getUsername(), savedUser.getPhone(), savedUser.getRole().name(), "Registration successful"));
+    }
+
+    /**
+     * Endpoint pour créer un admin (réservé aux admins existants)
+     */
+    @PostMapping("/register-admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> registerAdmin(@RequestBody AuthDTO.RegisterRequest request) {
+        Long phoneNumberToSave;
+        try {
+            String phoneStr = request.getPhone();
+            Long phoneNumber = Long.parseLong(phoneStr);
+            if (phoneStr.startsWith("222")) {
+                phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
+            } else {
+                phoneNumberToSave = phoneNumber;
+            }
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Numéro de téléphone invalide"));
+        }
+
+        // Vérifier que le téléphone n'existe pas déjà
+        if (userRepository.findByPhone(phoneNumberToSave) != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone already exists"));
+        }
+
+        // Vérifier que le username n'existe pas déjà
+        if (userRepository.findByUsername(request.getUsername()) != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Username already exists"));
+        }
+
+        User user = User.builder()
+            .username(request.getUsername())
+            .pwd(passwordEncoder.encode(request.getPassword()))
+            .phone(phoneNumberToSave)
+            .role(Role.ADMIN) // Toujours ADMIN pour cet endpoint
+            .imageData(User.DEFAULT_IMAGE_DATA)
+            .build();
+
+        User savedUser = userRepository.save(user);
+
+        String token = jwtUtil.generateToken(savedUser);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Admin created successfully",
+            "userId", savedUser.getId(),
+            "username", savedUser.getUsername(),
+            "role", savedUser.getRole().name(),
+            "token", token
+        ));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody AuthDTO.LoginRequest request) {
+        if (request.getDeviceId() == null || request.getDeviceId().isBlank()
+                || request.getFcmToken() == null || request.getFcmToken().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("deviceId and fcmToken are required"));
+        }
+
+        // Enlever le préfixe 222 si présent
+        Long phoneToSearch = request.getPhone();
+        String phoneStr = String.valueOf(request.getPhone());
+        if (phoneStr.startsWith("222")) {
+            phoneToSearch = Long.parseLong(phoneStr.substring(3));
+        }
+        
+        // Find user by phone (sans préfixe 222)
+        User user = userRepository.findByPhone(phoneToSearch);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("User not found with this phone number"));
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(user.getUsername(), request.getPassword())
+            );
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("Invalid phone or password"));
+        }
+
+        UserSessionService.SessionReplacementResult sessionResult = userSessionService.replaceSession(
+                user.getId(),
+                request.getDeviceId(),
+                request.getDeviceName(),
+                request.getFcmToken()
+        );
+
+        String previousFcmToken = sessionResult.previousFcmToken();
+        if (previousFcmToken != null && !Objects.equals(previousFcmToken, request.getFcmToken())) {
+            fcmService.sendForceLogoutToToken(previousFcmToken, "session_replaced");
+        }
+
+        UserSession session = sessionResult.session();
+        String token = jwtUtil.generateToken(user, session.getSessionVersion(), session.getDeviceId());
+
+        return ResponseEntity.ok(new AuthDTO.AuthResponse(
+            token, 
+            user.getId(), 
+            user.getUsername(), 
+            user.getPhone(), 
+            user.getRole().name(), 
+            "Login successful"
+        ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceIdHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            try {
+                Long userId = jwtUtil.extractUserId(token);
+                Long sessionVersion = jwtUtil.extractSessionVersion(token);
+                String tokenDeviceId = jwtUtil.extractDeviceId(token);
+
+                if (userId != null && sessionVersion != null && tokenDeviceId != null && tokenDeviceId.equals(deviceIdHeader)) {
+                    userSessionService.revokeIfCurrent(userId, sessionVersion, tokenDeviceId);
+                }
+            } catch (Exception ignored) {
+                // Best effort logout
+            }
+            jwtUtil.expireToken(token);
+        }
+        return ResponseEntity.ok(new AuthDTO.AuthResponse("Logout successful"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody AuthDTO.ResetPasswordRequest request) {
+        if (request.getPhone() == null || request.getPhone().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("Phone is required"));
+        }
+
+        if (request.getVerificationCode() == null || request.getVerificationCode().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("Verification code is required"));
+        }
+
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("Password is required"));
+        }
+
+        Long phoneToSearch;
+        try {
+            String phoneStr = request.getPhone();
+            Long parsedPhone = Long.parseLong(phoneStr);
+            if (phoneStr.startsWith("222")) {
+                phoneToSearch = Long.parseLong(phoneStr.substring(3));
+            } else {
+                phoneToSearch = parsedPhone;
+            }
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
+        }
+
+        boolean isCodeValid = phoneVerificationService.consumeCode(
+                phoneToSearch, request.getVerificationCode());
+
+        if (!isCodeValid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Code de vérification invalide ou expiré"));
+        }
+
+        User user = userRepository.findByPhone(phoneToSearch);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthDTO.AuthResponse("User not found"));
+        }
+
+        user.setPwd(passwordEncoder.encode(request.getPassword()));
+        userRepository.save(user);
+
+        phoneVerificationService.cleanupExpiredCodes(phoneToSearch);
+        userSessionService.revokeAllSessionsForUser(user.getId());
+
+        return ResponseEntity.ok(new AuthDTO.AuthResponse("Password updated successfully"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("No token provided"));
+        }
+
+        String token = authHeader.substring(7);
+        String username = jwtUtil.extractEmail(token);
+
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthDTO.AuthResponse("User not found"));
+        }
+
+        return ResponseEntity.ok(new AuthDTO.AuthResponse(token, user.getId(), user.getUsername(), user.getPhone(), user.getRole().name(), "User found"));
+    }
+}
+

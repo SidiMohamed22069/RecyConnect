@@ -1,0 +1,151 @@
+package com.project.RecyConnect.Security;
+
+import com.project.RecyConnect.Model.User;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+
+@Component
+public class JwtUtil {
+
+    /** Taille minimale de cle imposee par HMAC-SHA256 (256 bits). */
+    private static final int MIN_SECRET_BYTES = 32;
+
+    /**
+     * Secret de signature, fourni par la configuration (variable d'environnement
+     * JWT_SECRET). Aucune valeur par defaut: l'application doit refuser de
+     * demarrer plutot que de signer avec un secret connu.
+     */
+    private final Key signingKey;
+
+    /** Duree de validite d'un token, en minutes. */
+    private final long expirationMinutes;
+
+    private final Set<String> invalidatedTokens = ConcurrentHashMap.newKeySet();
+
+    public JwtUtil(@Value("${jwt.secret}") String secret,
+                   @Value("${jwt.expiration-minutes:1380}") long expirationMinutes) {
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "jwt.secret doit faire au moins " + MIN_SECRET_BYTES + " octets (256 bits) pour HS256");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+        this.expirationMinutes = expirationMinutes;
+    }
+
+
+    public String generateToken(String userName) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(claims, userName);
+    }
+
+    public String generateToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("username", user.getUsername());
+        claims.put("role", user.getRole().name());
+        return createToken(claims, user.getUsername());
+    }
+
+    public String generateToken(User user, Long sessionVersion, String deviceId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("username", user.getUsername());
+        claims.put("role", user.getRole().name());
+        claims.put("sessionVersion", sessionVersion);
+        claims.put("deviceId", deviceId);
+        return createToken(claims, user.getUsername());
+    }
+
+    private String createToken(Map<String, Object> claims, String userName) {
+        long now = System.currentTimeMillis();
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(userName)
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + expirationMinutes * 60_000L))
+                .signWith(signingKey, SignatureAlgorithm.HS256).compact();
+    }
+
+    public void expireToken(String token) {
+        invalidatedTokens.add(token);
+    }
+
+    private Key getSignKey() {
+        return signingKey;
+    }
+
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public Long extractUserId(String token) {
+        Object raw = extractAllClaims(token).get("userId");
+        if (raw instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    public Long extractSessionVersion(String token) {
+        Object raw = extractAllClaims(token).get("sessionVersion");
+        if (raw instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    public String extractDeviceId(String token) {
+        Object raw = extractAllClaims(token).get("deviceId");
+        return raw == null ? null : raw.toString();
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+
+
+    public Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token).getBody();
+    }
+
+    public Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+
+    public String hello(String token, User userDetails) {
+        final String username = extractEmail(token);
+        return userDetails.getUsername();
+    }
+
+    public Boolean validateToken(String token, UserDetails userDetails) {
+        final String username = extractEmail(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token) && !invalidatedTokens.contains(token));
+    }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = extractAllClaims(token);
+        return (String) claims.get("role");
+    }
+}

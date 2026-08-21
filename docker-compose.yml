@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: recyconnect-db
+    restart: always
+    environment:
+      POSTGRES_DB: recyconnect
+      POSTGRES_USER: recyconnect_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD est requis}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Port non publie: la base n'est joignable que depuis le reseau Docker.
+    # Decommenter uniquement pour un acces local de debug.
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recyconnect_user -d recyconnect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application Spring Boot
+  app:
+    build: .
+    container_name: recyconnect-app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/recyconnect
+      SPRING_DATASOURCE_USERNAME: recyconnect_user
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD est requis}
+      # JPA
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "false"
+      # Server
+      SERVER_PORT: 8081
+      # File uploads
+      FILE_UPLOAD_DIR: /app/uploads
+      # Securite (requis, aucune valeur par defaut)
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET est requis}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-1380}
+      # SMS
+      SMS_VALIDATION_KEY: ${SMS_VALIDATION_KEY:?SMS_VALIDATION_KEY est requis}
+      SMS_TOKEN: ${SMS_TOKEN:?SMS_TOKEN est requis}
+      # URLs publiques
+      APP_CLIENT_URL: ${APP_CLIENT_URL:?APP_CLIENT_URL est requis}
+      APP_SERVER_URL: ${APP_SERVER_URL:?APP_SERVER_URL est requis}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "8081:8081"
+
+volumes:
+  postgres_data:
+  uploads_data:
