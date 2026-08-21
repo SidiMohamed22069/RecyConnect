@@ -25,13 +25,16 @@ public class NegotiationService {
     private final UserRepo userRepo;
     private final ProductRepository productRepo;
     private final NotificationService notificationService;
+    private final FileUrlService fileUrlService;
 
     public NegotiationService(NegotiationRepository repo, UserRepo userRepo,
-                              ProductRepository productRepo, NotificationService notificationService) {
+                              ProductRepository productRepo, NotificationService notificationService,
+                              FileUrlService fileUrlService) {
         this.repo = repo;
         this.userRepo = userRepo;
         this.productRepo = productRepo;
         this.notificationService = notificationService;
+        this.fileUrlService = fileUrlService;
     }
 
     private NegotiationDTO toDTO(Negotiation n) {
@@ -49,7 +52,7 @@ public class NegotiationService {
         dto.setReceiverUsername(n.getReceiver() != null ? n.getReceiver().getUsername() : null);
         if (n.getProduct() != null) {
             dto.setProductTitle(n.getProduct().getTitle());
-            dto.setProductImageUrls(n.getProduct().getImageUrls());
+            dto.setProductImageUrls(fileUrlService.toPublicUrls(n.getProduct().getImageUrls()));
             dto.setProductUnit(n.getProduct().getUnit());
         }
         return dto;
