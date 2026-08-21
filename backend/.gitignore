@@ -33,7 +33,14 @@ build/
 .vscode/
 
 ### Application properties ###
+### Contient des secrets: utiliser application.properties.example comme modele.
 src/main/resources/application.properties
 
 ### Firebase credentials ###
 src/main/resources/service-account-key.json
+
+### Variables d'environnement ###
+.env
+
+### Fichiers televerses par les utilisateurs ###
+uploads/

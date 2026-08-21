@@ -8,6 +8,7 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.*;
 import lombok.Data;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -16,8 +17,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Endpoints de diagnostic FCM.
+ *
+ * RESERVE AUX ADMINISTRATEURS: ces routes exposent la liste des utilisateurs
+ * (numeros de telephone, tokens FCM) et permettent d'emettre des notifications
+ * arbitraires. Elles ne doivent jamais etre accessibles publiquement.
+ */
 @RestController
 @RequestMapping("/api/fcm-test")
+@PreAuthorize("hasRole('ADMIN')")
 public class FCMTestController {
     
     private final FCMService fcmService;

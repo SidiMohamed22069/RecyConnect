@@ -38,9 +38,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        // Temporairement désactivé pour éviter la boucle infinie
-        // TODO: Réactiver une fois le problème résolu
-        // registration.interceptors(authInterceptor);
+        // Authentification (CONNECT) et autorisation des abonnements (SUBSCRIBE).
+        // L'intercepteur ne traite que ces deux commandes et laisse passer les
+        // autres frames, ce qui evite la boucle de traitement rencontree
+        // lorsqu'il inspectait tous les messages.
+        registration.interceptors(authInterceptor);
     }
 }
 
