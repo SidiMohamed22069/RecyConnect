@@ -8,6 +8,11 @@
 
 ---
 
+> **État au 2026-08-21** — Branche `fix/securite-critique`.
+> Les **8 failles critiques** et **9 constats majeurs** sont corrigés (détail en fin de document).
+> Suite de tests : **208 tests, 0 échec**. Le contexte Spring complet démarre.
+> ⚠️ **Action manuelle requise et non effectuée : révoquer le token API SMS et changer le mot de passe PostgreSQL.**
+
 ## Synthèse
 
 L'architecture générale est saine et lisible : découpage Controller / Service / Repository / DTO cohérent, usage correct de JPA, verrou pessimiste bien placé sur l'acceptation d'offre (`findByIdForUpdate`), et une vraie logique métier de file d'offres. Le projet est fonctionnel.
@@ -477,3 +482,57 @@ Ce qui est bien fait mérite d'être noté :
 20. Tests d'intégration sur la sécurité et la logique métier — en réutilisant `spring-security-test`, déjà présent
 21. SLF4J à la place de `System.out` (Q1)
 22. Refactoriser les duplications : extraction du parsing téléphone, unification des méthodes de mise à jour (Q2)
+
+---
+
+## Suivi des corrections — branche `fix/securite-critique`
+
+### ✅ Corrigé
+
+| Réf | Constat | Correctif appliqué |
+|---|---|---|
+| C1 | Création de compte ADMIN par n'importe qui | Rôle forcé à `USER` dans `/register` ; le champ `role` du corps est ignoré |
+| C2 | Code OTP renvoyé dans la réponse HTTP | `sendVerificationCode` retourne `void` ; le code ne transite plus que par SMS |
+| C3 | `/api/fcm-test/**` public | `@PreAuthorize("hasRole('ADMIN')")` au niveau classe + règle `hasRole` dans la config |
+| C4 | Tous les OTP lisibles et forgeables | `PhoneVerificationController` supprimé (le vrai flux est dans `AuthController`) |
+| C5 | Secrets dans Git | Externalisés en variables d'environnement ; `application.properties` désormais non suivi ; `.example` fourni |
+| C6 | WebSocket sans authentification | Intercepteur réactivé + autorisation sur `SUBSCRIBE` (canal personnel uniquement) |
+| C7 | Notifications et négociations publiques | Retirées des routes en lecture publique |
+| C8 | IDOR sur les comptes utilisateurs | Contrôle *self-or-admin* sur `PUT`/`PATCH`/`DELETE` ; `GET /api/users` et `POST` réservés aux admins |
+| M1 | Autorités vides → espace admin inopérant | `loadUserByUsername` retourne l'entité `User` ; repli sur `ROLE_USER` si le rôle est absent |
+| M2 | Règle de sécurité morte (singulier/pluriel) | Disparue avec la suppression du contrôleur |
+| M4 | CORS permissif | `app.client.url=*` retiré de la production (valeur explicite requise) |
+| M9 | OTP faible | `SecureRandom` ; code à usage unique ; un seul code actif par numéro ; anti-spam de 60 s |
+| M10 | Validation du numéro incohérente | Regex `^(222)?[0-9]{8}$` : le format international est enfin accepté |
+| M11 | Échecs SMS silencieux | L'erreur remonte ; le code n'est plus journalisé |
+| M12 | `ddl-auto` en production | Partiellement : les tests utilisent H2 `create-drop` ; Flyway reste à faire |
+| M13 | Mot de passe Docker par défaut | Secrets requis explicitement ; port PostgreSQL non publié |
+| R11 | DSL Spring Security dépréciée | Migration vers la forme lambda |
+| R10 | `httpBasic()` superflu | Retiré |
+| — | 2 tests erronés (`getAuthorities`) | Alignés sur la convention `ROLE_` ; échouaient déjà avant ces travaux |
+| — | `contextLoads` inexécutable sans PostgreSQL | H2 en portée test + `src/test/resources/application.properties` |
+
+### ⏳ Restant
+
+Tous les autres constats : **M3** (liste noire JWT en mémoire), **M5** (`PATCH /negotiations` trop permissif), **M6** (catégories), **M7** (notifications forgeables), **M8** (uploads non validés), ainsi que l'ensemble des points 🟡 (validation d'entrée, `@ControllerAdvice`, pagination, N+1, logger, duplications).
+
+### ⚠️ Actions manuelles indispensables
+
+Le code ne peut pas les réaliser :
+
+1. **Révoquer le token API SMS Chinguisoft** et en générer un nouveau.
+2. **Changer le mot de passe PostgreSQL** de production.
+3. Définir `JWT_SECRET` en production (`openssl rand -base64 48`). Changer ce secret **invalide tous les tokens en circulation** : les utilisateurs devront se reconnecter.
+4. Décider du sort de l'historique Git : les secrets restent lisibles dans tous les commits depuis `24574d8`. Purge via `git filter-repo` (réécrit l'historique, nécessite un `push --force` coordonné) ou acceptation du risque après rotation.
+
+### 📱 Changements visibles par le client mobile
+
+À vérifier côté application Flutter avant déploiement :
+
+- `POST /api/auth/send-code` ne renvoie plus le code — l'app doit s'appuyer uniquement sur le SMS reçu.
+- `GET /api/notifications/**`, `/api/negotiations/**` et `/api/users/**` exigent désormais un token.
+- Un code OTP n'est plus valable qu'une fois : rejouer le même code échoue.
+- Deux demandes de code à moins de 60 s d'intervalle sont refusées.
+- Un échec d'envoi SMS renvoie maintenant une erreur au lieu d'un `200`.
+- Les numéros au format `+222XXXXXXXX` sont acceptés (ils étaient auparavant rejetés à tort).
+- L'abonnement WebSocket exige un token valide, et uniquement sur son propre canal `/user/{sonId}/notifications`.
