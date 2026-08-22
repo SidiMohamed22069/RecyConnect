@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.project.RecyConnect.Service.FileUrlService;
+
 import jakarta.annotation.PostConstruct;
 
 @RestController
@@ -35,13 +37,13 @@ public class FileController {
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
 
-    @Value("${app.server.url}")
-    private String serverUrl;
-
-    @Value("${server.port:8081}")
-    private String serverPort;
+    private final FileUrlService fileUrlService;
 
     private Path uploadPath;
+
+    public FileController(FileUrlService fileUrlService) {
+        this.fileUrlService = fileUrlService;
+    }
 
     @PostConstruct
     public void init() {
@@ -73,7 +75,7 @@ public class FileController {
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             // Return the URL to access the file
-            String fileUrl = serverUrl + ":" + serverPort + "/api/files/" + newFilename;
+            String fileUrl = fileUrlService.urlForFilename(newFilename);
 
             return ResponseEntity.ok().body(new FileUploadResponse(fileUrl, newFilename));
         } catch (IOException e) {
@@ -102,7 +104,7 @@ public class FileController {
                 Path targetLocation = uploadPath.resolve(newFilename);
                 Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-                String fileUrl = "http://localhost:" + serverPort + "/api/files/" + newFilename;
+                String fileUrl = fileUrlService.urlForFilename(newFilename);
                 responses.add(new FileUploadResponse(fileUrl, newFilename));
             } catch (IOException e) {
                 // Continue with other files

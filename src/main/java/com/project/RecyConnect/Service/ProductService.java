@@ -21,13 +21,16 @@ public class ProductService {
     private final CategoryRepository categoryRepo;
     private final UserRepo userRepo;
     private final NegotiationService negotiationService;
+    private final FileUrlService fileUrlService;
 
     public ProductService(ProductRepository repo, CategoryRepository categoryRepo,
-                          UserRepo userRepo, NegotiationService negotiationService) {
+                          UserRepo userRepo, NegotiationService negotiationService,
+                          FileUrlService fileUrlService) {
         this.repo = repo;
         this.categoryRepo = categoryRepo;
         this.userRepo = userRepo;
         this.negotiationService = negotiationService;
+        this.fileUrlService = fileUrlService;
     }
 
     private ProductDTO toDTO(Product p) {
@@ -41,7 +44,9 @@ public class ProductService {
         dto.setQuantityTotal(p.getQuantityTotal());
         dto.setQuantityAvailable(p.getQuantityAvailable());
         dto.setStatus(p.getStatus());
-        dto.setImageUrls(p.getImageUrls());
+        // Les URL sont reecrites vers l'hote courant: les annonces creees quand
+        // le serveur avait une autre adresse restent affichables.
+        dto.setImageUrls(fileUrlService.toPublicUrls(p.getImageUrls()));
         dto.setCategoryId(p.getCategory() != null ? p.getCategory().getId() : null);
         dto.setUserId(p.getUser() != null ? p.getUser().getId() : null);
         // Add nested info
