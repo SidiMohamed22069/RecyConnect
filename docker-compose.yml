@@ -51,8 +51,25 @@ services:
       # URLs publiques
       APP_CLIENT_URL: ${APP_CLIENT_URL:?APP_CLIENT_URL est requis}
       APP_SERVER_URL: ${APP_SERVER_URL:?APP_SERVER_URL est requis}
+      # Administrateur d'amorcage (voir Config/AdminSeeder.java).
+      # Desactive par defaut en prod: n'activer que le temps de creer le
+      # premier ADMIN, puis remettre ADMIN_SEED_ENABLED=false et changer
+      # le mot de passe. Le seeder ne touche jamais un compte existant.
+      ADMIN_SEED_ENABLED: ${ADMIN_SEED_ENABLED:-false}
+      ADMIN_SEED_USERNAME: ${ADMIN_SEED_USERNAME:-admin}
+      ADMIN_SEED_PHONE: ${ADMIN_SEED_PHONE:-22222222}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-}
+      # Firebase Cloud Messaging: la cle est montee en volume (voir ci-dessous),
+      # jamais embarquee dans l'image. Le prefixe "file:" est obligatoire.
+      FCM_SERVICE_ACCOUNT_KEY: file:/app/secrets/service-account-key.json
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-recyconnect-24ffd}
     volumes:
       - uploads_data:/app/uploads
+      # Cle de service Firebase, en lecture seule. Placer le fichier a cet emplacement
+      # sur l'hote (ou surcharger FCM_SERVICE_ACCOUNT_KEY_FILE dans .env).
+      # Attention: si le fichier hote n'existe pas, Docker cree un repertoire vide a sa
+      # place. L'application demarre quand meme, en journalisant "FCM desactive".
+      - ${FCM_SERVICE_ACCOUNT_KEY_FILE:-./secrets/service-account-key.json}:/app/secrets/service-account-key.json:ro
     ports:
       - "8081:8081"
 

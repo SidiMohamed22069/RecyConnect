@@ -18,12 +18,24 @@ spring.jpa.show-sql=false
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.properties.hibernate.format_sql=false
 spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+# Les controleurs ne renvoient que des DTO: aucune association lazy n'est
+# resolue pendant le rendu de la reponse.
+spring.jpa.open-in-view=false
 
 # --- Securite JWT ---
 # OBLIGATOIRE. Minimum 32 octets. Generer avec: openssl rand -base64 48
 jwt.secret=${JWT_SECRET}
 # Duree de validite d'un token en minutes (1380 = 23 h)
 jwt.expiration-minutes=${JWT_EXPIRATION_MINUTES:1380}
+
+# --- Compte administrateur d'amorcage ---
+# Cree au demarrage si le numero n'est pas deja pris (voir AdminSeeder).
+# Indispensable sur une base neuve: /api/auth/register-admin exige deja un ADMIN.
+# Sans mot de passe renseigne, le seeder ne cree rien et le signale au demarrage.
+app.admin-seed.enabled=${ADMIN_SEED_ENABLED:true}
+app.admin-seed.username=${ADMIN_SEED_USERNAME:admin}
+app.admin-seed.phone=${ADMIN_SEED_PHONE:22222222}
+app.admin-seed.password=${ADMIN_SEED_PASSWORD:}
 
 # --- Upload de fichiers ---
 file.upload-dir=${FILE_UPLOAD_DIR:uploads}
@@ -43,5 +55,9 @@ sms.chinguisoft.base-url=${SMS_BASE_URL:https://chinguisoft.com/api/sms/validati
 sms.chinguisoft.lang=fr
 
 # --- Firebase Cloud Messaging ---
+# En local, deposer la cle dans src/main/resources/ (fichier gitignore).
+# Un chemin sans prefixe est lu dans le classpath; utiliser "file:/chemin/absolu.json"
+# pour lire hors du classpath (c'est ce que fait le profil prod).
+# Laisser vide desactive proprement les notifications push.
 fcm.service-account-key=${FCM_SERVICE_ACCOUNT_KEY:service-account-key.json}
 fcm.project-id=${FCM_PROJECT_ID:}

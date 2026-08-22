@@ -50,6 +50,14 @@
 			<groupId>com.google.firebase</groupId>
 			<artifactId>firebase-admin</artifactId>
 			<version>9.2.0</version>
+			<exclusions>
+				<!-- Spring Boot fournit deja spring-jcl, qui remplace commons-logging.
+				     Garder les deux declenche un avertissement au demarrage. -->
+				<exclusion>
+					<groupId>commons-logging</groupId>
+					<artifactId>commons-logging</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
