@@ -51,6 +51,14 @@ services:
       # URLs publiques
       APP_CLIENT_URL: ${APP_CLIENT_URL:?APP_CLIENT_URL est requis}
       APP_SERVER_URL: ${APP_SERVER_URL:?APP_SERVER_URL est requis}
+      # Administrateur d'amorcage (voir Config/AdminSeeder.java).
+      # Desactive par defaut en prod: n'activer que le temps de creer le
+      # premier ADMIN, puis remettre ADMIN_SEED_ENABLED=false et changer
+      # le mot de passe. Le seeder ne touche jamais un compte existant.
+      ADMIN_SEED_ENABLED: ${ADMIN_SEED_ENABLED:-false}
+      ADMIN_SEED_USERNAME: ${ADMIN_SEED_USERNAME:-admin}
+      ADMIN_SEED_PHONE: ${ADMIN_SEED_PHONE:-22222222}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-}
       # Firebase Cloud Messaging: la cle est montee en volume (voir ci-dessous),
       # jamais embarquee dans l'image. Le prefixe "file:" est obligatoire.
       FCM_SERVICE_ACCOUNT_KEY: file:/app/secrets/service-account-key.json
