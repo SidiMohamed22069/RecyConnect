@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.project.RecyConnect.DTO.ProductDTO;
 import com.project.RecyConnect.Model.Product;
@@ -76,14 +77,17 @@ public class ProductService {
         return p;
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDTO> findAll() {
         return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Optional<ProductDTO> findById(Long id) {
         return repo.findById(id).map(this::toDTO);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDTO> findByUserId(Long userId) {
         return repo.findByUserId(userId).stream()
                 .filter(p -> p.getStatus() != ProductStatus.ARCHIVED)
@@ -91,10 +95,12 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDTO> findByCategoryId(Long categoryId) {
         return repo.findByCategoryId(categoryId).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDTO> search(String query, Long categoryId, Long excludeUserId) {
         return repo.findAll().stream()
                 .filter(p -> p.getStatus() == ProductStatus.AVAILABLE)
@@ -106,6 +112,7 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDTO> findByUserIdWithStatus(Long userId, String status) {
         ProductStatus filterStatus = parseStatus(status);
         return repo.findByUserId(userId).stream()
@@ -121,10 +128,12 @@ public class ProductService {
         return ProductStatus.fromValue(status);
     }
 
+    @Transactional
     public ProductDTO save(ProductDTO dto) {
         return toDTO(repo.save(fromDTO(dto)));
     }
 
+    @Transactional
     public ProductDTO update(Long id, ProductDTO dto) {
         return repo.findById(id).map(existing -> {
             existing.setTitle(dto.getTitle());
@@ -142,6 +151,7 @@ public class ProductService {
         }).orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
+    @Transactional
     public ProductDTO patch(Long id, ProductDTO dto) {
         return repo.findById(id).map(existing -> {
             if (dto.getTitle() != null) existing.setTitle(dto.getTitle());
@@ -163,6 +173,7 @@ public class ProductService {
         }).orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
+    @Transactional
     public ProductDTO updateQuantity(Long productId, Long quantityOffer) {
         return repo.findById(productId).map(existing -> {
             Long newQuantity = existing.getQuantityAvailable() - quantityOffer;
@@ -177,6 +188,7 @@ public class ProductService {
         }).orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
+    @Transactional
     public void delete(Long id) {
         repo.deleteById(id);
     }

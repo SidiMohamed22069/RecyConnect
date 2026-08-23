@@ -3,6 +3,7 @@ package com.project.RecyConnect.Model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -27,7 +28,9 @@ public class Product {
     @Convert(converter = ProductStatusConverter.class)
     private ProductStatus status;
     
+    // Lazy, mais chargee par lots: lister N annonces ne declenche pas N requetes.
     @ElementCollection
+    @BatchSize(size = 50)
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "image_url")
     private List<String> imageUrls;

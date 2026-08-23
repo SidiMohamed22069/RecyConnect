@@ -77,22 +77,27 @@ public class NegotiationService {
         return n;
     }
 
+    @Transactional(readOnly = true)
     public List<NegotiationDTO> findAll() {
         return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Optional<NegotiationDTO> findById(Long id) {
         return repo.findById(id).map(this::toDTO);
     }
 
+    @Transactional(readOnly = true)
     public List<NegotiationDTO> findBySenderId(Long senderId) {
         return repo.findBySenderId(senderId).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<NegotiationDTO> findByReceiverId(Long receiverId) {
         return repo.findByReceiverId(receiverId).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<NegotiationDTO> findByProductId(Long productId, String status) {
         List<NegotiationDTO> rows = repo.findByProductId(productId).stream()
                 .filter(n -> status == null || status.isEmpty() || status.equalsIgnoreCase(n.getStatus()))
@@ -105,6 +110,7 @@ public class NegotiationService {
         return rows;
     }
 
+    @Transactional(readOnly = true)
     public List<NegotiationDTO> getQueueByProductId(Long productId) {
         List<NegotiationDTO> queue = repo.findByProductIdAndStatusIn(productId, List.of(NegotiationStatus.STATUS_PENDING)).stream()
                 .map(this::toDTO)
@@ -342,6 +348,7 @@ public class NegotiationService {
         notifyQueueUpdated(productId, changedByUserId, null);
     }
 
+    @Transactional(readOnly = true)
     public EarningsDTO getSellerEarnings(Long sellerId) {
         Double amount = repo.sumAcceptedAmountBySellerId(sellerId);
         Long acceptedCount = repo.countAcceptedBySellerId(sellerId);
@@ -353,6 +360,7 @@ public class NegotiationService {
         return dto;
     }
 
+    @Transactional
     public void delete(Long id) {
         repo.deleteById(id);
     }
