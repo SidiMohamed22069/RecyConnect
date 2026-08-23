@@ -21,7 +21,11 @@ public class CategoryService {
         CategoryDTO dto = new CategoryDTO();
         dto.setId(c.getId());
         dto.setCreatedAt(c.getCreatedAt());
+        dto.setCode(c.getCode());
         dto.setName(c.getName());
+        dto.setNameFr(c.getNameFr());
+        dto.setNameAr(c.getNameAr());
+        dto.setNameEn(c.getNameEn());
         dto.setDescription(c.getDescription());
         return dto;
     }
@@ -30,7 +34,11 @@ public class CategoryService {
         return Category.builder()
                 .id(dto.getId())
                 .createdAt(dto.getCreatedAt())
+                .code(dto.getCode())
                 .name(dto.getName())
+                .nameFr(dto.getNameFr())
+                .nameAr(dto.getNameAr())
+                .nameEn(dto.getNameEn())
                 .description(dto.getDescription())
                 .build();
     }
@@ -50,7 +58,14 @@ public class CategoryService {
     public CategoryDTO update(Long id, CategoryDTO dto) {
         return repo.findById(id).map(existing -> {
             existing.setName(dto.getName());
+            existing.setNameFr(dto.getNameFr());
+            existing.setNameAr(dto.getNameAr());
+            existing.setNameEn(dto.getNameEn());
             existing.setDescription(dto.getDescription());
+            // Le code n'est jamais reecrit depuis l'API: c'est la cle a laquelle
+            // les clients rattachent leurs libelles de secours. Le changer
+            // reviendrait a renommer la categorie pour toutes les versions de
+            // l'application deja installees.
             return toDTO(repo.save(existing));
         }).orElseThrow(() -> new RuntimeException("Category not found"));
     }
@@ -58,6 +73,9 @@ public class CategoryService {
     public CategoryDTO patch(Long id, CategoryDTO dto) {
         return repo.findById(id).map(existing -> {
             if (dto.getName() != null) existing.setName(dto.getName());
+            if (dto.getNameFr() != null) existing.setNameFr(dto.getNameFr());
+            if (dto.getNameAr() != null) existing.setNameAr(dto.getNameAr());
+            if (dto.getNameEn() != null) existing.setNameEn(dto.getNameEn());
             if (dto.getDescription() != null) existing.setDescription(dto.getDescription());
             return toDTO(repo.save(existing));
         }).orElseThrow(() -> new RuntimeException("Category not found"));

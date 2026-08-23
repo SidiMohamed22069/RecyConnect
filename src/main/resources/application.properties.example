@@ -37,6 +37,20 @@ app.admin-seed.username=${ADMIN_SEED_USERNAME:admin}
 app.admin-seed.phone=${ADMIN_SEED_PHONE:22222222}
 app.admin-seed.password=${ADMIN_SEED_PASSWORD:}
 
+# --- Catalogue des categories (donnee de reference) ---
+# Cree les categories de dechets recyclables au demarrage si elles manquent,
+# et complete les traductions absentes (voir CategorySeeder).
+# Sans elles, le filtre de l'accueil est vide et le depot d'annonce n'offre
+# aucun choix: actif par defaut, en local comme en production.
+app.category-seed.enabled=${CATEGORY_SEED_ENABLED:true}
+
+# --- Jeu de donnees de demonstration ---
+# Trois comptes mauritaniens et dix annonces (voir DemoSeeder).
+# Desactive par defaut: des annonces fictives sur un environnement ouvert au
+# public seraient prises pour de vraies offres.
+app.demo-seed.enabled=${DEMO_SEED_ENABLED:false}
+app.demo-seed.password=${DEMO_SEED_PASSWORD:}
+
 # --- Upload de fichiers ---
 file.upload-dir=${FILE_UPLOAD_DIR:uploads}
 spring.servlet.multipart.enabled=true
