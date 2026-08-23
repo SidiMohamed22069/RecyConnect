@@ -59,6 +59,15 @@ services:
       ADMIN_SEED_USERNAME: ${ADMIN_SEED_USERNAME:-admin}
       ADMIN_SEED_PHONE: ${ADMIN_SEED_PHONE:-22222222}
       ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-}
+      # Catalogue des categories (voir Config/CategorySeeder.java).
+      # Donnee de reference, pas de demonstration: sans elle, l'application
+      # mobile n'a aucune categorie a proposer.
+      CATEGORY_SEED_ENABLED: ${CATEGORY_SEED_ENABLED:-true}
+      # Jeu de donnees de demonstration (voir Config/DemoSeeder.java).
+      # Trois comptes et dix annonces fictives: n'activer que sur un
+      # environnement de demonstration, jamais sur celui des vrais utilisateurs.
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
+      DEMO_SEED_PASSWORD: ${DEMO_SEED_PASSWORD:-}
       # Firebase Cloud Messaging: la cle est montee en volume (voir ci-dessous),
       # jamais embarquee dans l'image. Le prefixe "file:" est obligatoire.
       FCM_SERVICE_ACCOUNT_KEY: file:/app/secrets/service-account-key.json

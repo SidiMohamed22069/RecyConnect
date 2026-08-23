@@ -183,13 +183,63 @@ class CategoryTest {
     @Test
     void testAllArgsConstructor() {
         List<Product> products = new ArrayList<>();
-        Category full = new Category(1L, now, "Full", "Full Description", products);
-        
+        Category full = new Category(1L, now, "FULL", "Full", "Complet", "\u0643\u0627\u0645\u0644", "Full",
+                "Full Description", products);
+
         assertEquals(1L, full.getId());
+        assertEquals("FULL", full.getCode());
         assertEquals("Full", full.getName());
+        assertEquals("Complet", full.getNameFr());
         assertEquals("Full Description", full.getDescription());
         assertEquals(now, full.getCreatedAt());
         assertEquals(products, full.getProducts());
+    }
+
+    // ==================== Tests pour getLocalizedName() ====================
+
+    /**
+     * Le libelle affiche vient de la base, pas d'un dictionnaire embarque dans
+     * l'application: une categorie ajoutee apres coup doit pouvoir s'afficher
+     * dans les trois langues sans republier le mobile.
+     */
+    @Test
+    void testGetLocalizedName_ReturnsRequestedLanguage() {
+        Category iron = Category.builder()
+                .code("IRON")
+                .name("Iron")
+                .nameEn("Iron")
+                .nameFr("Fer")
+                .nameAr("\u0627\u0644\u062d\u062f\u064a\u062f")
+                .build();
+
+        assertEquals("Fer", iron.getLocalizedName("fr"));
+        assertEquals("\u0627\u0644\u062d\u062f\u064a\u062f", iron.getLocalizedName("ar"));
+        assertEquals("Iron", iron.getLocalizedName("en"));
+    }
+
+    @Test
+    void testGetLocalizedName_IgnoresCase() {
+        Category iron = Category.builder().name("Iron").nameFr("Fer").build();
+        assertEquals("Fer", iron.getLocalizedName("FR"));
+    }
+
+    /** Une traduction manquante ne doit pas laisser une ligne vide a l'ecran. */
+    @Test
+    void testGetLocalizedName_FallsBackToEnglishThenName() {
+        Category partial = Category.builder().name("Textiles").nameEn("Textiles").build();
+        assertEquals("Textiles", partial.getLocalizedName("ar"));
+
+        Category bare = Category.builder().name("Textiles").build();
+        assertEquals("Textiles", bare.getLocalizedName("fr"));
+        assertEquals("Textiles", bare.getLocalizedName(null));
+        assertEquals("Textiles", bare.getLocalizedName("es"));
+    }
+
+    /** Un libelle vide en base compte comme absent, pas comme une traduction. */
+    @Test
+    void testGetLocalizedName_TreatsBlankTranslationAsMissing() {
+        Category blank = Category.builder().name("Textiles").nameEn("Textiles").nameFr("   ").build();
+        assertEquals("Textiles", blank.getLocalizedName("fr"));
     }
 
     // ==================== Tests pour equals et hashCode ====================

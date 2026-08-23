@@ -88,9 +88,51 @@ connue.
 | `FILE_UPLOAD_DIR` | non | `uploads` | Dossier de stockage des fichiers |
 | `FCM_PROJECT_ID` | non | — | Projet Firebase. Vide = notifications push désactivées |
 | `FCM_SERVICE_ACCOUNT_KEY` | non | `service-account-key.json` | Clé de service Firebase, à placer dans `src/main/resources/` |
+| `CATEGORY_SEED_ENABLED` | non | `true` | Crée le catalogue des catégories au démarrage (voir *Données d'amorçage*) |
+| `ADMIN_SEED_ENABLED` / `ADMIN_SEED_PASSWORD` | non | `true` / — | Compte administrateur d'amorçage. Désactivé en prod |
+| `DEMO_SEED_ENABLED` / `DEMO_SEED_PASSWORD` | non | `false` / — | Jeu de démonstration : 3 comptes, 10 annonces |
 
 Fichiers **jamais versionnés** : `application.properties`, `.env`,
 `service-account-key.json`, `uploads/`.
+
+---
+
+## Données d'amorçage
+
+Trois `ApplicationRunner` remplissent la base au démarrage. Tous sont **idempotents** :
+ils ne créent que ce qui manque et ne modifient jamais une ligne existante.
+
+| Seeder | Actif par défaut | Ce qu'il crée |
+|---|---|---|
+| `CategorySeeder` | **oui** (prod comprise) | Les 5 catégories de déchets, traduites en fr/ar/en |
+| `AdminSeeder` | oui en dev, non en prod | Le premier compte `ADMIN` |
+| `DemoSeeder` | **non** | 3 comptes mauritaniens et 10 annonces de démonstration |
+
+### Catalogue des catégories
+
+Donnée de **référence**, pas de démonstration : sans elle l'application mobile n'a aucun
+filtre à l'accueil et le dépôt d'annonce n'offre aucun choix. Le seeder est donc actif
+partout.
+
+Chaque catégorie porte un `code` stable (`PLASTIC`, `PAPER`, `IRON`, `WOOD`,
+`ELECTRONICS`) et ses trois libellés. Sur une base antérieure au champ `code`, les
+catégories existantes sont **reconnues par leur nom et complétées sur place** — jamais
+dupliquées, pour ne pas détacher les annonces déjà classées.
+
+### Jeu de démonstration
+
+```bash
+DEMO_SEED_ENABLED=true DEMO_SEED_PASSWORD=<mot-de-passe> ./mvnw spring-boot:run
+```
+
+Crée `Sidi Mohamed Ould Ahmed`, `Mariem Mint Abdellahi` et `Ahmedou Ould Cheikhna`, puis
+dix annonces réparties sur les cinq catégories et trois statuts. Les trois comptes
+partagent `DEMO_SEED_PASSWORD` ; la connexion se fait au format `222XXXXXXXX`.
+
+À laisser à `false` partout ailleurs : des annonces fictives sur un environnement ouvert
+au public passeraient pour de vraies offres. Si le numéro d'un compte de démonstration
+appartient déjà à quelqu'un, ce compte est ignoré plutôt que réutilisé, et les annonces
+d'un compte ne sont créées que s'il n'en possède aucune.
 
 ---
 
@@ -100,7 +142,7 @@ Fichiers **jamais versionnés** : `application.properties`, `.env`,
 ./mvnw test
 ```
 
-**208 tests.** Ils utilisent une base H2 en mémoire (`src/test/resources/application.properties`),
+**239 tests.** Ils utilisent une base H2 en mémoire (`src/test/resources/application.properties`),
 donc **aucune installation de PostgreSQL n'est nécessaire** — utile en intégration continue.
 Le test `contextLoads` démarre le contexte Spring complet et valide le câblage de la
 configuration de sécurité.
@@ -193,7 +235,7 @@ X-Device-Id: <le deviceId de la session>
 | Endpoint | Description |
 |---|---|
 | `POST /api/auth/**` | Inscription, connexion, code SMS, réinitialisation |
-| `GET /api/categories/**` | Catalogue des catégories |
+| `GET /api/categories/**` | Catalogue des catégories, libellés `nameFr` / `nameAr` / `nameEn` inclus |
 | `GET /api/products` · `/{id}` · `/search` | Catalogue des produits |
 | `GET /api/products/category/{id}` · `/user/{id}` | Produits par catégorie ou vendeur |
 | `GET /api/files/{filename}` | Téléchargement d'un fichier |
@@ -226,6 +268,26 @@ X-Device-Id: <le deviceId de la session>
 | `/api/fcm-test/**` | Diagnostic Firebase |
 
 Une collection Postman complète est fournie : `RecyConnect_Postman_Collection.json`.
+
+---
+
+### Traduction des catégories
+
+Une catégorie transporte ses libellés, un par langue :
+
+```json
+{ "id": 3, "code": "IRON", "name": "Iron",
+  "nameFr": "Fer", "nameAr": "الحديد", "nameEn": "Iron" }
+```
+
+Le serveur ne choisit pas : il ne connaît pas la langue de l'appelant, et une même réponse
+peut être mise en cache pour des utilisateurs de langues différentes. **C'est au client de
+prendre le champ de sa locale**, avec `nameEn` puis `name` en recours — une catégorie créée
+sans son libellé arabe reste ainsi lisible plutôt que d'afficher une ligne vide.
+
+Conséquence pratique : une catégorie ajoutée depuis l'admin s'affiche traduite **sans
+republier l'application mobile**. Le `code` est un identifiant stable, non modifiable par
+l'API, auquel les clients rattachent leurs libellés de secours.
 
 ---
 
