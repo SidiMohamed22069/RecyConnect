@@ -214,6 +214,37 @@ public class NegotiationController {
         }
     }
 
+    /**
+     * Les numeros des deux parties d'une offre acceptee.
+     *
+     * <p>Remplace la lecture de {@code GET /api/users/{id}} que l'application
+     * faisait pour recuperer un numero : elle y obtenait la fiche complete de
+     * n'importe quel compte, donc l'annuaire (C3 de l'audit). Ici, le serveur
+     * ne rend un numero qu'a une partie de la transaction, et seulement une
+     * fois l'offre acceptee.
+     *
+     * <p>Les codes distinguent les refus : 403 si le demandeur est etranger a
+     * l'offre, 409 si elle n'est pas encore acceptee. Le 409 n'est pas un
+     * detail de style — cote mobile, un 403 sur un appel signe declenche la
+     * deconnexion locale, et une offre en attente y suffirait.
+     */
+    @GetMapping("/{id}/contact")
+    public ResponseEntity<?> getContact(@PathVariable Long id) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        NegotiationService.ContactLookup lookup = service.findContact(id, currentUser.getId());
+        return switch (lookup.access()) {
+            case GRANTED -> ResponseEntity.ok(lookup.contact());
+            case NOT_FOUND -> ResponseEntity.notFound().build();
+            case NOT_A_PARTY -> ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            case NOT_ACCEPTED -> ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Contact is available once the offer is accepted"));
+        };
+    }
+
     @GetMapping("/earnings/me")
     public ResponseEntity<EarningsDTO> getMyEarnings() {
         User currentUser = userService.getCurrentUser();
