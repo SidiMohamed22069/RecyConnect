@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<!--
+    Copie servie par l'API, a l'URL declaree dans la Play Console et dans
+    lib/core/config/legal_links.dart de l'application mobile.
+
+    SOURCE : mobile-app/recy_connect/web/legal/privacy.html
+    Toute modification doit etre portee aux deux endroits — une divergence entre
+    ce qui est publie et le formulaire "Securite des donnees" de la Console est
+    un motif de refus a part entiere.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Politique de confidentialité — RecyConnect</title>
+<meta name="description" content="Politique de confidentialité de RecyConnect : données collectées, usages, partage, conservation, droits.">
+<style>
+  :root { --green:#56B67F; --green-dark:#2E7D32; --ink:#1f2933; --muted:#5b6b7a; --line:#e4eae8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+         color:var(--ink); background:#f7faf8; line-height:1.65; }
+  header { background:linear-gradient(160deg,var(--green),var(--green-dark)); color:#fff; padding:32px 20px 26px; }
+  header .wrap { max-width:780px; margin:0 auto; }
+  header .brand { font-weight:700; letter-spacing:.02em; opacity:.9; font-size:.95rem; }
+  header h1 { margin:.35em 0 .2em; font-size:1.7rem; line-height:1.25; }
+  header .updated { opacity:.85; font-size:.9rem; margin:0; }
+  .langs { max-width:780px; margin:18px auto -8px; padding:0 20px; display:flex; gap:8px; }
+  .langs button { border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:999px;
+                   padding:6px 14px; font-size:.88rem; cursor:pointer; }
+  .langs button[aria-pressed="true"] { background:var(--green); border-color:var(--green); color:#fff; font-weight:600; }
+  main { max-width:780px; margin:0 auto; padding:24px 20px 64px; }
+  section[hidden] { display:none; }
+  h2 { font-size:1.15rem; margin:2em 0 .5em; color:var(--green-dark); }
+  h2:first-of-type { margin-top:1em; }
+  p, li { font-size:1rem; }
+  ul { padding-inline-start:1.2em; }
+  li { margin:.35em 0; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:1.2em 0; }
+  .card p:first-child { margin-top:0; }
+  .card p:last-child { margin-bottom:0; }
+  a { color:var(--green-dark); }
+  .todo { background:#fff6e5; border:1px solid #f0d7a4; border-radius:10px; padding:12px 16px; font-size:.92rem; color:#6b5322; }
+  footer { border-top:1px solid var(--line); margin-top:40px; padding-top:18px; font-size:.88rem; color:var(--muted); }
+  [dir="rtl"] { text-align:right; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand">RecyConnect</div>
+  <h1 data-t="title">Politique de confidentialité</h1>
+  <p class="updated" data-t="updated">Dernière mise à jour : 24 août 2026</p>
+</div></header>
+
+<div class="langs" role="group" aria-label="Langue">
+  <button type="button" data-lang="fr" aria-pressed="true">Français</button>
+  <button type="button" data-lang="ar" aria-pressed="false">العربية</button>
+  <button type="button" data-lang="en" aria-pressed="false">English</button>
+</div>
+
+<main>
+<section lang="fr">
+<div class="todo"><strong>À compléter avant publication :</strong> raison sociale, adresse postale
+et numéro d'enregistrement de l'éditeur. Google Play exige des coordonnées vérifiables, et le
+formulaire « Sécurité des données » de la Console doit dire exactement ce qui est écrit ici.</div>
+
+<h2>1. Qui édite RecyConnect</h2>
+<p>RecyConnect est édité par <strong>Neyan</strong>, en partenariat avec la Région de Nouakchott.
+Toute question sur cette politique : <a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a>.</p>
+
+<h2>2. Les données que nous collectons</h2>
+<p>Uniquement ce que l'application transmet réellement au serveur :</p>
+<ul>
+  <li><strong>Nom d'utilisateur</strong> — affiché sur vos annonces et sur vos offres.</li>
+  <li><strong>Numéro de téléphone mauritanien (+222)</strong> — il sert d'identifiant de connexion,
+      il est vérifié par un code SMS à l'inscription, et il est communiqué à l'autre partie
+      <em>lorsqu'une offre a été acceptée</em>, pour permettre la mise en relation.</li>
+  <li><strong>Mot de passe</strong> — transmis au serveur à l'inscription et à la connexion, où il
+      est conservé sous forme irréversible (haché). Il n'est lisible par personne, pas même par
+      l'équipe.</li>
+  <li><strong>Photos</strong> — celles que vous joignez à une annonce, et votre photo de profil.</li>
+  <li><strong>Contenu que vous publiez</strong> — titre, description, catégorie, quantité, prix de
+      vos annonces, et l'historique des offres et contre-offres.</li>
+  <li><strong>Jeton de notification</strong> (Firebase Cloud Messaging) — pour vous prévenir d'une
+      offre reçue ou acceptée.</li>
+  <li><strong>Identifiant d'appareil</strong> — un numéro aléatoire (UUID) que l'application
+      engendre au premier lancement. Ce n'est <em>pas</em> un identifiant matériel : il ne permet
+      pas de vous suivre hors de RecyConnect. Il sert à la règle « une session à la fois ».</li>
+  <li><strong>Modèle et type d'appareil</strong> — affichés lors d'une demande de connexion, pour
+      que vous sachiez depuis quel appareil elle est faite.</li>
+  <li><strong>Rapports de plantage</strong> (Firebase Crashlytics) — uniquement lorsque
+      l'application s'arrête brutalement : modèle de l'appareil, version d'Android, version de
+      l'application et trace technique de l'incident, accompagnées d'un identifiant d'installation
+      aléatoire. Ni votre nom, ni votre numéro, ni le contenu de vos annonces n'y figurent.</li>
+</ul>
+<p><strong>Ce que nous ne collectons pas :</strong> aucune adresse e-mail, aucune position GPS,
+aucun accès à votre carnet d'adresses, aucun identifiant publicitaire. L'application ne contient
+ni publicité, ni outil de mesure d'audience, ni traceur tiers.</p>
+
+<h2>3. À quoi elles servent</h2>
+<ul>
+  <li>Créer et tenir votre compte, et vérifier que le numéro déclaré est bien le vôtre.</li>
+  <li>Publier vos annonces et les montrer aux autres utilisateurs.</li>
+  <li>Transmettre les offres, les contre-offres et leurs notifications.</li>
+  <li>Mettre en relation acheteur et vendeur une fois une offre acceptée.</li>
+  <li>Protéger les comptes : une seule session active, détection d'une connexion depuis un autre
+      appareil.</li>
+  <li>Corriger les pannes : comprendre pourquoi l'application s'est arrêtée.</li>
+  <li>Traiter les signalements de contenu et les blocages entre utilisateurs.</li>
+</ul>
+
+<h2>4. Avec qui elles sont partagées</h2>
+<ul>
+  <li><strong>Google (Firebase Cloud Messaging et Crashlytics)</strong> : le jeton de notification
+      et le contenu des notifications transitent par les serveurs de Google pour être livrés à votre
+      appareil ; les rapports de plantage y sont enregistrés pour que nous puissions corriger
+      l'application.</li>
+  <li><strong>L'autre partie d'une négociation</strong> : votre nom d'utilisateur, et votre numéro
+      de téléphone une fois l'offre acceptée.</li>
+  <li><strong>L'hébergeur de notre serveur</strong>, pour le seul stockage technique des données.</li>
+</ul>
+<p>Vos données ne sont ni vendues, ni louées, ni transmises à des annonceurs.</p>
+
+<h2>5. Combien de temps nous les gardons</h2>
+<ul>
+  <li>Tant que votre compte existe.</li>
+  <li>Après une demande de suppression : effacement du compte, des annonces, des photos et du jeton
+      de notification sous <strong>30 jours au plus</strong>, sauvegardes comprises.</li>
+  <li>Les seules données conservées au-delà sont celles qu'une obligation légale impose de garder
+      (par exemple la trace d'un signalement traité) ; elles sont isolées et ne sont plus
+      accessibles depuis l'application.</li>
+</ul>
+
+<h2>6. Comment elles sont protégées</h2>
+<ul>
+  <li>Tous les échanges entre l'application et le serveur passent par HTTPS (TLS).</li>
+  <li>Le jeton de session est rangé dans le stockage chiffré du système — Android Keystore,
+      trousseau iOS — et non en clair sur l'appareil.</li>
+  <li>Un compte ne peut avoir qu'une session active : une connexion ailleurs doit être confirmée.</li>
+</ul>
+<p>Aucun dispositif n'est infaillible ; nous vous prévenons sans délai si un incident touchait vos
+données.</p>
+
+<h2>7. Vos droits</h2>
+<ul>
+  <li><strong>Accès et rectification</strong> : votre profil est modifiable dans l'application
+      (Profil → Modifier).</li>
+  <li><strong>Suppression</strong> : dans l'application, <em>Profil → Supprimer mon compte</em> ;
+      ou sans installer l'application, par la page
+      <a href="delete-account.html">Supprimer mon compte</a>.</li>
+  <li><strong>Opposition et réclamation</strong> : écrivez à <a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a>.
+      Nous répondons sous 30 jours.</li>
+</ul>
+
+<h2>8. Âge minimum</h2>
+<p>RecyConnect met en relation des inconnus par téléphone : l'application est réservée aux personnes
+de <strong>18 ans et plus</strong>. Elle n'est pas destinée aux enfants et nous ne collectons pas
+sciemment de données les concernant.</p>
+
+<h2>9. Modifications</h2>
+<p>Toute modification de cette politique est publiée sur cette page, avec sa date. Un changement
+substantiel est en outre annoncé dans l'application.</p>
+
+<h2>10. Nous contacter</h2>
+<p><a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a></p>
+</section>
+
+<section lang="ar" dir="rtl" hidden>
+<div class="todo"><strong>يجب استكماله قبل النشر:</strong> الاسم القانوني للناشر وعنوانه البريدي
+ورقم تسجيله. يشترط Google Play بيانات اتصال قابلة للتحقق، ويجب أن يطابق نموذج «أمان البيانات» في
+Play Console ما هو مذكور هنا بالضبط.</div>
+
+<h2>١. من ينشر RecyConnect</h2>
+<p>تصدر تطبيق RecyConnect شركة <strong>Neyan</strong> بالشراكة مع ولاية نواكشوط.
+لأي سؤال بخصوص هذه السياسة: <a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a>.</p>
+
+<h2>٢. البيانات التي نجمعها</h2>
+<p>لا نجمع إلا ما يرسله التطبيق فعلياً إلى الخادم:</p>
+<ul>
+  <li><strong>اسم المستخدم</strong> — يظهر على إعلاناتك وعروضك.</li>
+  <li><strong>رقم الهاتف الموريتاني (+222)</strong> — يُستخدم لتسجيل الدخول، ويُتحقق منه برمز
+      يُرسل عبر رسالة نصية عند إنشاء الحساب، ويُطلع عليه الطرف الآخر <em>بعد قبول العرض</em>
+      حتى يتمكن الطرفان من التواصل.</li>
+  <li><strong>كلمة المرور</strong> — تُرسل إلى الخادم عند التسجيل والدخول، وتُحفظ فيه بصيغة
+      مشفّرة لا يمكن عكسها. لا يستطيع أحد قراءتها، ولا فريق العمل نفسه.</li>
+  <li><strong>الصور</strong> — الصور التي ترفقها بالإعلان، وصورة ملفك الشخصي.</li>
+  <li><strong>ما تنشره</strong> — عنوان الإعلان ووصفه وفئته والكمية والسعر، وسجل العروض
+      والعروض المقابلة.</li>
+  <li><strong>رمز الإشعارات</strong> (Firebase Cloud Messaging) — لتنبيهك عند استلام عرض أو قبوله.</li>
+  <li><strong>معرّف الجهاز</strong> — رقم عشوائي (UUID) ينشئه التطبيق عند أول تشغيل. وهو
+      <em>ليس</em> معرّفاً للعتاد ولا يسمح بتتبعك خارج RecyConnect، بل يخدم قاعدة «جلسة واحدة
+      في كل مرة».</li>
+  <li><strong>طراز الجهاز ونوعه</strong> — يُعرضان عند طلب تسجيل الدخول لتعرف من أي جهاز جاء الطلب.</li>
+  <li><strong>تقارير الأعطال</strong> (Firebase Crashlytics) — عند توقف التطبيق فجأة فقط: طراز
+      الجهاز وإصدار أندرويد وإصدار التطبيق والأثر التقني للعطل، مع معرّف تثبيت عشوائي. ولا يرد
+      فيها اسمك ولا رقمك ولا محتوى إعلاناتك.</li>
+</ul>
+<p><strong>ما لا نجمعه:</strong> لا عنوان بريد إلكتروني، ولا موقعاً جغرافياً، ولا وصولاً إلى
+جهات اتصالك، ولا معرّفاً إعلانياً. ولا يحتوي التطبيق على إعلانات ولا أدوات قياس ولا أي متتبّع
+تابع لطرف ثالث.</p>
+
+<h2>٣. أغراض الاستخدام</h2>
+<ul>
+  <li>إنشاء حسابك وإدارته، والتأكد من أن الرقم المُصرَّح به يخصك.</li>
+  <li>نشر إعلاناتك وعرضها على المستخدمين الآخرين.</li>
+  <li>إيصال العروض والعروض المقابلة وإشعاراتها.</li>
+  <li>الربط بين البائع والمشتري بعد قبول العرض.</li>
+  <li>حماية الحسابات: جلسة واحدة نشطة، والتنبيه عند تسجيل دخول من جهاز آخر.</li>
+  <li>إصلاح الأعطال: معرفة سبب توقف التطبيق.</li>
+  <li>معالجة بلاغات المحتوى وعمليات حظر المستخدمين.</li>
+</ul>
+
+<h2>٤. مع من تُشارَك</h2>
+<ul>
+  <li><strong>Google ‏(Firebase Cloud Messaging وCrashlytics)</strong>: يمر رمز الإشعارات ومحتواها
+      عبر خوادم Google حتى يصل إلى جهازك، وتُسجَّل فيها تقارير الأعطال كي نتمكن من إصلاح
+      التطبيق.</li>
+  <li><strong>الطرف الآخر في التفاوض</strong>: اسم المستخدم، ورقم الهاتف بعد قبول العرض.</li>
+  <li><strong>مستضيف خادمنا</strong>، لغرض التخزين التقني وحده.</li>
+</ul>
+<p>لا تُباع بياناتك ولا تُؤجَّر ولا تُسلَّم إلى المعلنين.</p>
+
+<h2>٥. مدة الاحتفاظ</h2>
+<ul>
+  <li>ما دام حسابك قائماً.</li>
+  <li>بعد طلب الحذف: يُمحى الحساب والإعلانات والصور ورمز الإشعارات خلال <strong>ثلاثين يوماً
+      كحد أقصى</strong>، بما في ذلك النسخ الاحتياطية.</li>
+  <li>لا يُحتفظ بعد ذلك إلا بما يفرضه القانون (مثل أثر بلاغ تمت معالجته)، وهو معزول ولا يمكن
+      الوصول إليه من التطبيق.</li>
+</ul>
+
+<h2>٦. كيف نحميها</h2>
+<ul>
+  <li>تمر جميع الاتصالات بين التطبيق والخادم عبر HTTPS ‏(TLS).</li>
+  <li>يُحفظ رمز الجلسة في مخزن النظام المشفّر — Android Keystore وسلسلة مفاتيح iOS — لا كنص
+      ظاهر على الجهاز.</li>
+  <li>للحساب جلسة نشطة واحدة، وأي دخول من مكان آخر يحتاج إلى تأكيد.</li>
+</ul>
+<p>لا يوجد نظام محصّن تماماً؛ وسنخبرك دون تأخير إن وقع حادث يمس بياناتك.</p>
+
+<h2>٧. حقوقك</h2>
+<ul>
+  <li><strong>الاطلاع والتصحيح</strong>: يمكنك تعديل ملفك الشخصي داخل التطبيق (الملف الشخصي ← تعديل).</li>
+  <li><strong>الحذف</strong>: من داخل التطبيق، <em>الملف الشخصي ← حذف حسابي</em>؛ أو من دون تثبيت
+      التطبيق عبر صفحة <a href="delete-account.html">حذف حسابي</a>.</li>
+  <li><strong>الاعتراض والشكاوى</strong>: راسلنا على <a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a>،
+      ونردّ خلال ثلاثين يوماً.</li>
+</ul>
+
+<h2>٨. الحد الأدنى للسن</h2>
+<p>يربط RecyConnect بين أشخاص لا يعرفون بعضهم عبر الهاتف، ولذلك فهو مخصص لمن بلغوا
+<strong>ثمانية عشر عاماً فأكثر</strong>. وهو غير موجّه للأطفال ولا نجمع بياناتهم عن قصد.</p>
+
+<h2>٩. التعديلات</h2>
+<p>يُنشر أي تعديل على هذه السياسة في هذه الصفحة مع تاريخه، ويُعلن عن التغييرات الجوهرية داخل
+التطبيق أيضاً.</p>
+
+<h2>١٠. للتواصل</h2>
+<p><a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a></p>
+</section>
+
+<section lang="en" hidden>
+<div class="todo"><strong>To complete before release:</strong> the publisher's legal name, postal
+address and registration number. Google Play requires verifiable contact details, and the Data
+Safety form must match this page exactly.</div>
+
+<h2>1. Who publishes RecyConnect</h2>
+<p>RecyConnect is published by <strong>Neyan</strong>, in partnership with the Nouakchott Region.
+Questions about this policy: <a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a>.</p>
+
+<h2>2. Data we collect</h2>
+<p>Only what the app actually sends to the server:</p>
+<ul>
+  <li><strong>Username</strong> — shown on your listings and offers.</li>
+  <li><strong>Mauritanian phone number (+222)</strong> — your sign-in identifier, verified by SMS
+      code at sign-up, and shared with the other party <em>once an offer has been accepted</em>, so
+      that you can be put in touch.</li>
+  <li><strong>Password</strong> — sent to the server at sign-up and sign-in, where it is stored
+      irreversibly (hashed). Nobody can read it back, not even our team.</li>
+  <li><strong>Photos</strong> — those you attach to a listing, and your profile picture.</li>
+  <li><strong>Content you publish</strong> — title, description, category, quantity and price of
+      your listings, and the history of offers and counter-offers.</li>
+  <li><strong>Notification token</strong> (Firebase Cloud Messaging) — to tell you when an offer is
+      received or accepted.</li>
+  <li><strong>Device identifier</strong> — a random number (UUID) the app generates on first launch.
+      It is <em>not</em> a hardware identifier and cannot be used to track you outside RecyConnect.
+      It enforces the "one session at a time" rule.</li>
+  <li><strong>Device model and type</strong> — displayed when a sign-in is requested, so you can see
+      which device is asking.</li>
+  <li><strong>Crash reports</strong> (Firebase Crashlytics) — only when the app stops
+      unexpectedly: device model, Android version, app version and the technical trace of the
+      incident, along with a random installation identifier. Your name, your number and the content
+      of your listings are not part of it.</li>
+</ul>
+<p><strong>What we do not collect:</strong> no e-mail address, no GPS location, no access to your
+contacts, no advertising identifier. The app carries no advertising, no analytics and no
+third-party tracker.</p>
+
+<h2>3. What we use it for</h2>
+<ul>
+  <li>Creating and maintaining your account, and checking that the phone number is yours.</li>
+  <li>Publishing your listings and showing them to other users.</li>
+  <li>Delivering offers, counter-offers and their notifications.</li>
+  <li>Putting buyer and seller in touch once an offer is accepted.</li>
+  <li>Protecting accounts: a single active session, and detection of a sign-in from another device.</li>
+  <li>Fixing failures: understanding why the app stopped.</li>
+  <li>Handling content reports and user blocks.</li>
+</ul>
+
+<h2>4. Who it is shared with</h2>
+<ul>
+  <li><strong>Google (Firebase Cloud Messaging and Crashlytics)</strong>: the notification token and
+      the contents of notifications pass through Google servers to reach your device; crash reports
+      are recorded there so that we can fix the app.</li>
+  <li><strong>The other party in a negotiation</strong>: your username, and your phone number once
+      the offer is accepted.</li>
+  <li><strong>Our server host</strong>, for technical storage only.</li>
+</ul>
+<p>Your data is never sold, rented, or passed to advertisers.</p>
+
+<h2>5. How long we keep it</h2>
+<ul>
+  <li>For as long as your account exists.</li>
+  <li>After a deletion request: account, listings, photos and notification token are erased within
+      <strong>30 days at most</strong>, backups included.</li>
+  <li>The only data kept beyond that is what the law requires us to keep (for instance the record of
+      a handled report); it is isolated and no longer reachable from the app.</li>
+</ul>
+
+<h2>6. How it is protected</h2>
+<ul>
+  <li>All traffic between the app and the server goes over HTTPS (TLS).</li>
+  <li>The session token is kept in the platform's encrypted store — Android Keystore, iOS
+      Keychain — never in the clear on the device.</li>
+  <li>An account has one active session: signing in elsewhere must be confirmed.</li>
+</ul>
+<p>No system is infallible; we will tell you without delay if an incident affected your data.</p>
+
+<h2>7. Your rights</h2>
+<ul>
+  <li><strong>Access and correction</strong>: your profile is editable in the app
+      (Profile → Edit).</li>
+  <li><strong>Deletion</strong>: in the app, <em>Profile → Delete my account</em>; or, without
+      installing it, through the <a href="delete-account.html">Delete my account</a> page.</li>
+  <li><strong>Objection and complaints</strong>: write to <a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a>.
+      We answer within 30 days.</li>
+</ul>
+
+<h2>8. Minimum age</h2>
+<p>RecyConnect puts strangers in touch by phone: it is restricted to people aged
+<strong>18 and over</strong>. It is not directed at children and we do not knowingly collect their
+data.</p>
+
+<h2>9. Changes</h2>
+<p>Any change to this policy is published on this page, with its date. A substantial change is also
+announced inside the app.</p>
+
+<h2>10. Contact</h2>
+<p><a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a></p>
+</section>
+</main>
+
+<script>
+  var titles = {"fr": {"title": "Politique de confidentialité", "updated": "Dernière mise à jour : 24 août 2026"}, "ar": {"title": "سياسة الخصوصية", "updated": "آخر تحديث: 24 أغسطس 2026"}, "en": {"title": "Privacy Policy", "updated": "Last updated: 24 August 2026"}};
+  var buttons = document.querySelectorAll('.langs button');
+  function show(lang) {
+    document.querySelectorAll('main section').forEach(function (s) {
+      s.hidden = s.getAttribute('lang') !== lang;
+    });
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+    });
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.querySelector('[data-t="title"]').textContent = titles[lang].title;
+    document.querySelector('[data-t="updated"]').textContent = titles[lang].updated;
+    document.title = titles[lang].title + ' — RecyConnect';
+  }
+  buttons.forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.lang); }); });
+  var initial = (navigator.language || 'fr').slice(0, 2);
+  show(['fr', 'ar', 'en'].indexOf(initial) >= 0 ? initial : 'fr');
+</script>
+</body>
+</html>

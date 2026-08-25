@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!--
+    Copie servie par l'API, a l'URL declaree dans la Play Console et dans
+    lib/core/config/legal_links.dart de l'application mobile.
+
+    SOURCE : mobile-app/recy_connect/web/legal/delete-account.html
+    Toute modification doit etre portee aux deux endroits — une divergence entre
+    ce qui est publie et le formulaire "Securite des donnees" de la Console est
+    un motif de refus a part entiere.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supprimer mon compte — RecyConnect</title>
+<meta name="description" content="Demander la suppression de votre compte RecyConnect et des données associées.">
+<style>
+  :root { --green:#56B67F; --green-dark:#2E7D32; --ink:#1f2933; --muted:#5b6b7a; --line:#e4eae8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+         color:var(--ink); background:#f7faf8; line-height:1.65; }
+  header { background:linear-gradient(160deg,var(--green),var(--green-dark)); color:#fff; padding:32px 20px 26px; }
+  header .wrap { max-width:780px; margin:0 auto; }
+  header .brand { font-weight:700; letter-spacing:.02em; opacity:.9; font-size:.95rem; }
+  header h1 { margin:.35em 0 .2em; font-size:1.7rem; line-height:1.25; }
+  header .updated { opacity:.85; font-size:.9rem; margin:0; }
+  .langs { max-width:780px; margin:18px auto -8px; padding:0 20px; display:flex; gap:8px; }
+  .langs button { border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:999px;
+                   padding:6px 14px; font-size:.88rem; cursor:pointer; }
+  .langs button[aria-pressed="true"] { background:var(--green); border-color:var(--green); color:#fff; font-weight:600; }
+  main { max-width:780px; margin:0 auto; padding:24px 20px 64px; }
+  section[hidden] { display:none; }
+  h2 { font-size:1.15rem; margin:2em 0 .5em; color:var(--green-dark); }
+  h2:first-of-type { margin-top:1em; }
+  p, li { font-size:1rem; }
+  ul { padding-inline-start:1.2em; }
+  li { margin:.35em 0; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:1.2em 0; }
+  .card p:first-child { margin-top:0; }
+  .card p:last-child { margin-bottom:0; }
+  a { color:var(--green-dark); }
+  .todo { background:#fff6e5; border:1px solid #f0d7a4; border-radius:10px; padding:12px 16px; font-size:.92rem; color:#6b5322; }
+  footer { border-top:1px solid var(--line); margin-top:40px; padding-top:18px; font-size:.88rem; color:var(--muted); }
+  [dir="rtl"] { text-align:right; }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand">RecyConnect</div>
+  <h1 data-t="title">Supprimer mon compte</h1>
+  <p class="updated" data-t="updated">Dernière mise à jour : 24 août 2026</p>
+</div></header>
+
+<div class="langs" role="group" aria-label="Langue">
+  <button type="button" data-lang="fr" aria-pressed="true">Français</button>
+  <button type="button" data-lang="ar" aria-pressed="false">العربية</button>
+  <button type="button" data-lang="en" aria-pressed="false">English</button>
+</div>
+
+<main>
+<section lang="fr">
+<p>Cette page explique comment faire supprimer votre compte RecyConnect et les données qui s'y
+rattachent — depuis l'application, ou sans l'installer.</p>
+
+<h2>1. Depuis l'application</h2>
+<div class="card">
+  <p><strong>Profil → Supprimer mon compte.</strong></p>
+  <p>L'écran récapitule ce qui sera effacé, puis demande votre mot de passe pour confirmer que la
+  demande vient bien de vous. La suppression est immédiate : vous êtes déconnecté et vos annonces
+  disparaissent de l'application.</p>
+</div>
+
+<h2>2. Sans installer l'application</h2>
+<div class="card">
+  <p>Envoyez-nous une demande depuis le numéro ou avec les informations du compte concerné :</p>
+  <p><a href="mailto:neyan.office@gmail.com?subject=Suppression%20de%20mon%20compte%20RecyConnect&body=Bonjour%2C%0A%0AJe%20demande%20la%20suppression%20de%20mon%20compte%20RecyConnect%20et%20des%20donn%C3%A9es%20qui%20s%27y%20rattachent.%0A%0ANum%C3%A9ro%20de%20t%C3%A9l%C3%A9phone%20du%20compte%20%28%2B222%29%20%3A%20%0ANom%20d%27utilisateur%20%3A%20%0A%0AJe%20comprends%20que%20cette%20suppression%20est%20d%C3%A9finitive.%0A"><strong>Demander la suppression par e-mail</strong></a></p>
+  <p>Indiquez le <strong>numéro de téléphone du compte</strong> et votre <strong>nom
+  d'utilisateur</strong>. Nous vérifions que la demande émane bien du titulaire — par un code envoyé
+  au numéro — avant toute suppression, puis nous la traitons sous <strong>30 jours</strong> et vous
+  confirmons par retour.</p>
+</div>
+
+<h2>3. Ce qui est supprimé</h2>
+<ul>
+  <li>le compte lui-même : nom d'utilisateur, numéro de téléphone, mot de passe ;</li>
+  <li>la photo de profil ;</li>
+  <li>toutes vos annonces et les photos qui y sont jointes ;</li>
+  <li>les offres et contre-offres que vous avez émises ;</li>
+  <li>le jeton de notification et l'identifiant d'appareil ;</li>
+  <li>vos sessions ouvertes, sur tous les appareils.</li>
+</ul>
+
+<h2>4. Ce qui est conservé, et combien de temps</h2>
+<ul>
+  <li>Les copies présentes dans nos <strong>sauvegardes</strong> disparaissent avec leur rotation,
+      au plus tard <strong>30 jours</strong> après la suppression.</li>
+  <li>La trace d'un <strong>signalement traité</strong> vous concernant, et les éléments que la loi
+      nous impose de conserver, sont gardés le temps prescrit. Ils sont isolés du service et ne sont
+      plus accessibles depuis l'application.</li>
+  <li>Une négociation à laquelle vous avez participé peut rester visible chez l'autre partie sans
+      votre nom ni votre numéro.</li>
+</ul>
+
+<h2>5. C'est définitif</h2>
+<p>La suppression ne peut pas être annulée : ni les annonces, ni l'historique des offres, ni le
+compte ne peuvent être rétablis. Pour revenir sur RecyConnect, il faudra créer un nouveau compte.</p>
+
+<h2>6. Une question ?</h2>
+<p><a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a> — voir aussi la
+<a href="privacy.html">politique de confidentialité</a>.</p>
+</section>
+
+<section lang="ar" dir="rtl" hidden>
+<p>تشرح هذه الصفحة كيفية حذف حسابك في RecyConnect وما يرتبط به من بيانات، من داخل التطبيق أو من
+دون تثبيته.</p>
+
+<h2>١. من داخل التطبيق</h2>
+<div class="card">
+  <p><strong>الملف الشخصي ← حذف حسابي.</strong></p>
+  <p>تعرض الشاشة ما سيُمحى، ثم تطلب كلمة المرور للتأكد من أن الطلب صادر عنك. والحذف فوري: يُنهى
+  تسجيل دخولك وتختفي إعلاناتك من التطبيق.</p>
+</div>
+
+<h2>٢. من دون تثبيت التطبيق</h2>
+<div class="card">
+  <p>أرسل إلينا طلباً ببيانات الحساب المعني:</p>
+  <p><a href="mailto:neyan.office@gmail.com?subject=%D8%AD%D8%B0%D9%81%20%D8%AD%D8%B3%D8%A7%D8%A8%D9%8A%20%D9%81%D9%8A%20RecyConnect&body=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%0A%0A%D8%A3%D8%B7%D9%84%D8%A8%20%D8%AD%D8%B0%D9%81%20%D8%AD%D8%B3%D8%A7%D8%A8%D9%8A%20%D9%81%D9%8A%20RecyConnect%20%D9%88%D9%85%D8%A7%20%D9%8A%D8%B1%D8%AA%D8%A8%D8%B7%20%D8%A8%D9%87%20%D9%85%D9%86%20%D8%A8%D9%8A%D8%A7%D9%86%D8%A7%D8%AA.%0A%0A%D8%B1%D9%82%D9%85%20%D9%87%D8%A7%D8%AA%D9%81%20%D8%A7%D9%84%D8%AD%D8%B3%D8%A7%D8%A8%20%28%2B222%29%3A%20%0A%D8%A7%D8%B3%D9%85%20%D8%A7%D9%84%D9%85%D8%B3%D8%AA%D8%AE%D8%AF%D9%85%3A%20%0A%0A%D8%A3%D8%AF%D8%B1%D9%83%20%D8%A3%D9%86%20%D9%87%D8%B0%D8%A7%20%D8%A7%D9%84%D8%AD%D8%B0%D9%81%20%D9%86%D9%87%D8%A7%D8%A6%D9%8A.%0A"><strong>طلب الحذف عبر البريد الإلكتروني</strong></a></p>
+  <p>اذكر <strong>رقم هاتف الحساب</strong> و<strong>اسم المستخدم</strong>. نتحقق من أن الطلب صادر
+  عن صاحب الحساب — برمز يُرسل إلى الرقم — قبل أي حذف، ثم نعالجه خلال <strong>ثلاثين يوماً</strong>
+  ونؤكد لك ذلك.</p>
+</div>
+
+<h2>٣. ما الذي يُحذف</h2>
+<ul>
+  <li>الحساب نفسه: اسم المستخدم ورقم الهاتف وكلمة المرور؛</li>
+  <li>صورة الملف الشخصي؛</li>
+  <li>جميع إعلاناتك والصور المرفقة بها؛</li>
+  <li>العروض والعروض المقابلة التي قدّمتها؛</li>
+  <li>رمز الإشعارات ومعرّف الجهاز؛</li>
+  <li>جلساتك المفتوحة على كل الأجهزة.</li>
+</ul>
+
+<h2>٤. ما الذي يُحتفظ به ولأي مدة</h2>
+<ul>
+  <li>تختفي النسخ الموجودة في <strong>النسخ الاحتياطية</strong> مع دورتها، وفي أقصى تقدير بعد
+      <strong>ثلاثين يوماً</strong> من الحذف.</li>
+  <li>يُحتفظ بأثر <strong>بلاغ تمت معالجته</strong> يخصك، وبما يوجب القانون حفظه، للمدة المقررة،
+      وهو معزول عن الخدمة ولا يمكن الوصول إليه من التطبيق.</li>
+  <li>قد تظل مفاوضة شاركت فيها ظاهرة لدى الطرف الآخر، من دون اسمك ولا رقمك.</li>
+</ul>
+
+<h2>٥. الحذف نهائي</h2>
+<p>لا يمكن التراجع عن الحذف: لا الإعلانات ولا سجل العروض ولا الحساب يمكن استعادتها. وللعودة إلى
+RecyConnect عليك إنشاء حساب جديد.</p>
+
+<h2>٦. لأي سؤال</h2>
+<p><a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a> — انظر أيضاً
+<a href="privacy.html">سياسة الخصوصية</a>.</p>
+</section>
+
+<section lang="en" hidden>
+<p>This page explains how to have your RecyConnect account and its data deleted — from the app, or
+without installing it.</p>
+
+<h2>1. From the app</h2>
+<div class="card">
+  <p><strong>Profile → Delete my account.</strong></p>
+  <p>The screen lists what will be erased, then asks for your password to confirm the request really
+  comes from you. Deletion is immediate: you are signed out and your listings disappear from the
+  app.</p>
+</div>
+
+<h2>2. Without installing the app</h2>
+<div class="card">
+  <p>Send us a request with the details of the account concerned:</p>
+  <p><a href="mailto:neyan.office@gmail.com?subject=Delete%20my%20RecyConnect%20account&body=Hello%2C%0A%0AI%20request%20the%20deletion%20of%20my%20RecyConnect%20account%20and%20of%20the%20data%20attached%20to%20it.%0A%0AAccount%20phone%20number%20%28%2B222%29%3A%20%0AUsername%3A%20%0A%0AI%20understand%20this%20deletion%20is%20permanent.%0A"><strong>Request deletion by e-mail</strong></a></p>
+  <p>Give the <strong>account phone number</strong> and your <strong>username</strong>. We check
+  that the request comes from the account holder — through a code sent to that number — before
+  deleting anything, then process it within <strong>30 days</strong> and confirm by reply.</p>
+</div>
+
+<h2>3. What is deleted</h2>
+<ul>
+  <li>the account itself: username, phone number, password;</li>
+  <li>the profile picture;</li>
+  <li>all your listings and the photos attached to them;</li>
+  <li>the offers and counter-offers you made;</li>
+  <li>the notification token and the device identifier;</li>
+  <li>your open sessions, on every device.</li>
+</ul>
+
+<h2>4. What is kept, and for how long</h2>
+<ul>
+  <li>Copies held in our <strong>backups</strong> disappear with their rotation, at the latest
+      <strong>30 days</strong> after deletion.</li>
+  <li>The record of a <strong>handled report</strong> concerning you, and anything the law requires
+      us to keep, is retained for the prescribed period. It is isolated from the service and no
+      longer reachable from the app.</li>
+  <li>A negotiation you took part in may remain visible to the other party, without your name or
+      number.</li>
+</ul>
+
+<h2>5. It is permanent</h2>
+<p>Deletion cannot be undone: neither the listings, nor the offer history, nor the account can be
+restored. Coming back to RecyConnect means creating a new account.</p>
+
+<h2>6. Questions?</h2>
+<p><a href="mailto:neyan.office@gmail.com">neyan.office@gmail.com</a> — see also the
+<a href="privacy.html">privacy policy</a>.</p>
+</section>
+</main>
+
+<script>
+  var titles = {"fr": {"title": "Supprimer mon compte", "updated": "Dernière mise à jour : 24 août 2026"}, "ar": {"title": "حذف حسابي", "updated": "آخر تحديث: 24 أغسطس 2026"}, "en": {"title": "Delete my account", "updated": "Last updated: 24 August 2026"}};
+  var buttons = document.querySelectorAll('.langs button');
+  function show(lang) {
+    document.querySelectorAll('main section').forEach(function (s) {
+      s.hidden = s.getAttribute('lang') !== lang;
+    });
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+    });
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.querySelector('[data-t="title"]').textContent = titles[lang].title;
+    document.querySelector('[data-t="updated"]').textContent = titles[lang].updated;
+    document.title = titles[lang].title + ' — RecyConnect';
+  }
+  buttons.forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.lang); }); });
+  var initial = (navigator.language || 'fr').slice(0, 2);
+  show(['fr', 'ar', 'en'].indexOf(initial) >= 0 ? initial : 'fr');
+</script>
+</body>
+</html>

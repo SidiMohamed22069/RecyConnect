@@ -1,6 +1,7 @@
 package com.project.RecyConnect.Service;
 
 import com.project.RecyConnect.DTO.EarningsDTO;
+import com.project.RecyConnect.DTO.NegotiationContactDTO;
 import com.project.RecyConnect.DTO.NegotiationDTO;
 import com.project.RecyConnect.Model.Negotiation;
 import com.project.RecyConnect.Model.NegotiationStatus;
@@ -358,6 +359,103 @@ public class NegotiationService {
         dto.setTotalAmount(amount != null ? amount : 0.0);
         dto.setAcceptedOffersCount(acceptedCount != null ? acceptedCount : 0L);
         return dto;
+    }
+
+    // ------------------------------------------------------------------
+    // Mise en relation (C3 de l'audit)
+
+    /**
+     * Ce que le serveur consent a reveler, selon qui demande.
+     *
+     * <p>Les quatre cas se traduisent par quatre codes HTTP distincts : le
+     * client doit pouvoir distinguer "offre inconnue" de "ce n'est pas la
+     * votre" et de "pas encore acceptee", sans avoir a lire un message.
+     */
+    public enum ContactAccess {
+        GRANTED,
+        NOT_FOUND,
+        NOT_A_PARTY,
+        NOT_ACCEPTED
+    }
+
+    /** Resultat de {@link #findContact(Long, Long)} : le verdict, et la fiche s'il est favorable. */
+    public record ContactLookup(ContactAccess access, NegotiationContactDTO contact) {
+        static ContactLookup denied(ContactAccess access) {
+            return new ContactLookup(access, null);
+        }
+    }
+
+    /**
+     * Les numeros des deux parties d'une offre, si {@code requesterId} y a droit.
+     *
+     * <p>Trois verrous, dans cet ordre :
+     * <ol>
+     *   <li>l'offre existe ;</li>
+     *   <li>le demandeur en est l'acheteur ou le vendeur — un tiers authentifie
+     *       n'obtient rien, c'est tout l'objet du point C3 ;</li>
+     *   <li>elle est acceptee — un numero n'est pas la contrepartie d'une offre
+     *       simplement deposee, sans quoi il suffirait d'offrir un ouguiya sur
+     *       chaque annonce pour recolter l'annuaire.</li>
+     * </ol>
+     *
+     * <p>Les deux numeros sont rendus, pas seulement celui d'en face : le
+     * demandeur connait deja le sien, et l'application s'en sert pour prevenir
+     * chaque partie du numero de l'autre en une seule lecture.
+     */
+    @Transactional(readOnly = true)
+    public ContactLookup findContact(Long negotiationId, Long requesterId) {
+        Negotiation offer = repo.findById(negotiationId).orElse(null);
+        if (offer == null) {
+            return ContactLookup.denied(ContactAccess.NOT_FOUND);
+        }
+
+        User buyer = offer.getSender();
+        User seller = sellerOf(offer);
+
+        if (!isParty(requesterId, buyer) && !isParty(requesterId, seller)) {
+            return ContactLookup.denied(ContactAccess.NOT_A_PARTY);
+        }
+        if (!NegotiationStatus.STATUS_ACCEPTED.equalsIgnoreCase(offer.getStatus())) {
+            return ContactLookup.denied(ContactAccess.NOT_ACCEPTED);
+        }
+
+        NegotiationContactDTO dto = new NegotiationContactDTO();
+        dto.setNegotiationId(offer.getId());
+        dto.setStatus(offer.getStatus());
+        if (buyer != null) {
+            dto.setBuyerId(buyer.getId());
+            dto.setBuyerUsername(buyer.getUsername());
+            dto.setBuyerPhone(phoneToString(buyer.getPhone()));
+        }
+        if (seller != null) {
+            dto.setSellerId(seller.getId());
+            dto.setSellerUsername(seller.getUsername());
+            dto.setSellerPhone(phoneToString(seller.getPhone()));
+        }
+        return new ContactLookup(ContactAccess.GRANTED, dto);
+    }
+
+    /**
+     * Le vendeur d'une offre : son destinataire, ou a defaut le proprietaire de
+     * l'annonce.
+     *
+     * <p>Les offres anterieures a l'ajout de {@code receiver} n'ont pas de
+     * destinataire enregistre. Sans ce repli, leur vendeur serait vu comme un
+     * tiers et se verrait refuser le numero de son propre acheteur.
+     */
+    private User sellerOf(Negotiation offer) {
+        if (offer.getReceiver() != null) {
+            return offer.getReceiver();
+        }
+        return offer.getProduct() != null ? offer.getProduct().getUser() : null;
+    }
+
+    private boolean isParty(Long requesterId, User party) {
+        return requesterId != null && party != null && requesterId.equals(party.getId());
+    }
+
+    private String phoneToString(Long phone) {
+        return phone != null ? String.valueOf(phone) : null;
     }
 
     @Transactional
