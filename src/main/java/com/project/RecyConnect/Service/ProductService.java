@@ -2,6 +2,7 @@ package com.project.RecyConnect.Service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -102,9 +103,26 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<ProductDTO> search(String query, Long categoryId, Long excludeUserId) {
+        return search(query, categoryId, excludeUserId, Set.of());
+    }
+
+    /**
+     * Recherche d'annonces, en masquant celles des comptes de
+     * {@code hiddenUserIds}.
+     *
+     * <p>Ce sont les comptes bloques par l'appelant, et ceux qui l'ont bloque :
+     * le blocage est declare dans un sens et s'applique dans les deux. Le
+     * filtrage cote client suffisait a masquer, mais la liste continuait de
+     * partir sur le reseau ; ici, elle ne quitte plus le serveur.
+     */
+    @Transactional(readOnly = true)
+    public List<ProductDTO> search(String query, Long categoryId, Long excludeUserId,
+                                   Set<Long> hiddenUserIds) {
+        Set<Long> hidden = hiddenUserIds == null ? Set.of() : hiddenUserIds;
         return repo.findAll().stream()
                 .filter(p -> p.getStatus() == ProductStatus.AVAILABLE)
                 .filter(p -> excludeUserId == null || p.getUser() == null || !p.getUser().getId().equals(excludeUserId))
+                .filter(p -> p.getUser() == null || !hidden.contains(p.getUser().getId()))
                 .filter(p -> categoryId == null || (p.getCategory() != null && p.getCategory().getId().equals(categoryId)))
                 .filter(p -> query == null || query.isEmpty() || 
                         (p.getTitle() != null && p.getTitle().toLowerCase().contains(query.toLowerCase())))

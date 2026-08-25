@@ -5,12 +5,16 @@ import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Model.UserSession;
+import com.project.RecyConnect.DTO.BlockedUserDTO;
 import com.project.RecyConnect.Security.JwtUtil;
+import com.project.RecyConnect.Service.AccountDeletionService;
+import com.project.RecyConnect.Service.ModerationService;
 import com.project.RecyConnect.Service.UserService;
 import com.project.RecyConnect.Service.UserSessionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +27,22 @@ public class UserController {
     private final UserService service;
     private final JwtUtil jwtUtil;
     private final UserSessionService userSessionService;
-    
-    public UserController(UserService service, JwtUtil jwtUtil, UserSessionService userSessionService) {
+    private final AccountDeletionService accountDeletionService;
+    private final ModerationService moderationService;
+    private final PasswordEncoder passwordEncoder;
+
+    public UserController(UserService service,
+                          JwtUtil jwtUtil,
+                          UserSessionService userSessionService,
+                          AccountDeletionService accountDeletionService,
+                          ModerationService moderationService,
+                          PasswordEncoder passwordEncoder) {
         this.service = service;
         this.jwtUtil = jwtUtil;
         this.userSessionService = userSessionService;
+        this.accountDeletionService = accountDeletionService;
+        this.moderationService = moderationService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /** Lister tous les comptes est une operation d'administration. */
@@ -96,18 +111,94 @@ public class UserController {
     }
 
     /**
-     * Suppression d'un compte.
-     * ATTENTION: l'entite User cascade sur products / negotiationsSent /
-     * negotiationsReceived, la suppression est donc destructrice au-dela du compte.
+     * Suppression definitive d'un compte.
+     *
+     * <p>Exigee par le reglement "Donnees utilisateur" de Google Play, qui
+     * impose a toute application creant des comptes un chemin de suppression
+     * depuis l'application. Ce que la suppression emporte reellement — annonces,
+     * photos sur le disque, offres, notifications, session, blocages — est
+     * detaille dans {@link AccountDeletionService} ; l'appel precedent se
+     * contentait d'un {@code deleteById} qui echouait des que le compte avait
+     * servi.
+     *
+     * <p>Supprimer <em>son propre</em> compte demande le mot de passe : un
+     * telephone laisse deverrouille ne doit pas suffire a effacer un compte.
+     * L'echec est rendu en 403 — l'application y lit "mot de passe refuse" et
+     * non "session expiree", et ne deconnecte donc pas l'utilisateur.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
-        ResponseEntity<?> denied = denyIfNotSelfOrAdmin(id);
-        if (denied != null) {
-            return denied;
+    public ResponseEntity<?> delete(@PathVariable Long id,
+                                    @RequestBody(required = false) DeleteAccountRequest request) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        service.delete(id);
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        boolean isSelf = currentUser.getId().equals(id);
+        if (!isAdmin && !isSelf) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "You can only modify your own account"));
+        }
+
+        if (isSelf) {
+            String password = request == null ? null : request.getPassword();
+            if (password == null || password.isBlank()
+                    || !passwordEncoder.matches(password, currentUser.getPassword())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("message", "Invalid password"));
+            }
+        }
+
+        try {
+            accountDeletionService.deleteAccount(id);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.noContent().build();
+    }
+
+    // ------------------------------------------------------------------
+    // Blocages entre utilisateurs
+    //
+    // Le reglement "Contenu genere par les utilisateurs" exige qu'un
+    // utilisateur puisse en bloquer un autre et cesser de voir ce qu'il
+    // publie. L'application tient une liste locale pour que le blocage soit
+    // immediat ; ces trois routes sont ce qui lui permet de survivre a un
+    // changement d'appareil, et au serveur de filtrer a la source.
+    // ------------------------------------------------------------------
+
+    @PostMapping("/{id}/block")
+    public ResponseEntity<?> block(@PathVariable Long id) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            moderationService.block(currentUser, id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}/block")
+    public ResponseEntity<?> unblock(@PathVariable Long id) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        moderationService.unblock(currentUser, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Les comptes que l'appelant a bloques. */
+    @GetMapping("/me/blocks")
+    public ResponseEntity<List<BlockedUserDTO>> myBlocks() {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(moderationService.listBlocked(currentUser.getId()));
     }
 
     /**
@@ -169,5 +260,11 @@ public class UserController {
     @lombok.Data
     public static class RoleUpdateDTO {
         private String role;
+    }
+
+    /** Le mot de passe qui accompagne une suppression de compte. */
+    @lombok.Data
+    public static class DeleteAccountRequest {
+        private String password;
     }
 }

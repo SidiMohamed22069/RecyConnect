@@ -111,10 +111,12 @@ public class UserService implements UserDetailsService {
         }).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public void delete(Long id) {
-        userRepository.deleteById(id);
-    }
-    
+    // `delete(Long)` a ete retiree: un `deleteById` ne suffit pas a supprimer un
+    // compte. Notifications, sessions et codes SMS referencent `users` sans
+    // cascade, et la contrainte d'integrite faisait echouer la requete des que
+    // le compte avait servi ; les photos des annonces, elles, restaient sur le
+    // disque. La suppression complete vit dans AccountDeletionService.
+
     public Optional<UserDTO> findByPhone(Long phone) {
         User user = userRepository.findByPhone(phone);
         if (user == null) {
