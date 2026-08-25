@@ -3,6 +3,7 @@ package com.project.RecyConnect.Controller;
 import com.project.RecyConnect.DTO.ProductDTO;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Service.ModerationService;
 import com.project.RecyConnect.Service.ProductService;
 import com.project.RecyConnect.Service.UserService;
 import org.springframework.http.HttpStatus;
@@ -18,10 +19,14 @@ public class ProductController {
 
     private final ProductService service;
     private final UserService userService;
-    
-    public ProductController(ProductService service, UserService userService) { 
+    private final ModerationService moderationService;
+
+    public ProductController(ProductService service,
+                             UserService userService,
+                             ModerationService moderationService) {
         this.service = service;
         this.userService = userService;
+        this.moderationService = moderationService;
     }
 
     @GetMapping
@@ -50,12 +55,23 @@ public class ProductController {
         return service.findByCategoryId(categoryId);
     }
 
+    /**
+     * Recherche d'annonces.
+     *
+     * <p>Le catalogue reste lisible sans compte : {@code getCurrentUser} rend
+     * alors {@code null} et il n'y a personne a masquer. Pour un utilisateur
+     * connecte, les annonces des comptes bloques — dans un sens ou dans
+     * l'autre — ne partent pas sur le reseau.
+     */
     @GetMapping("/search")
     public List<ProductDTO> search(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long excludeUserId) {
-        return service.search(query, categoryId, excludeUserId);
+        User currentUser = userService.getCurrentUser();
+        Long currentUserId = currentUser != null ? currentUser.getId() : null;
+        return service.search(query, categoryId, excludeUserId,
+                moderationService.hiddenUserIds(currentUserId));
     }
 
     @PostMapping

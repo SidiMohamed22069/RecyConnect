@@ -6,7 +6,8 @@ Source de vérité : `Config/WebSecurityConfiguration.java`, complété par les 
 `@PreAuthorize` sur les contrôleurs et par les contrôles de propriété codés dans les
 méthodes.
 
-> **Mis à jour le 2026-08-21.** Ce document décrivait auparavant un modèle où les
+> **Mis à jour le 2026-08-24** : suppression de compte, blocage et signalements
+> (conformité Google Play). Précédemment mis à jour le 2026-08-21 — Ce document décrivait auparavant un modèle où les
 > notifications, les négociations et les profils utilisateurs étaient lisibles sans
 > authentification. Ces routes ont été fermées (voir [CODE_REVIEW.md](CODE_REVIEW.md), C7).
 
@@ -93,10 +94,51 @@ automatiquement les offres devenues incompatibles avec la quantité restante.
 | Méthode | Endpoint | Règle |
 |---|---|---|
 | GET | `/api/users/{id}` · `/{id}/stats` · `/by-phone/{phone}` | Authentifié |
-| PUT · PATCH · DELETE | `/api/users/{id}` | **Son propre compte, ou admin** |
+| PUT · PATCH | `/api/users/{id}` | **Son propre compte, ou admin** |
+| DELETE | `/api/users/{id}` | Son propre compte **avec le mot de passe**, ou admin |
+| GET | `/api/users/me/blocks` | Les comptes que l'appelant a bloqués |
+| POST · DELETE | `/api/users/{id}/block` | Bloquer / débloquer un autre compte |
 
-⚠️ La suppression d'un compte est destructrice au-delà du compte : l'entité `User`
-cascade sur ses produits et ses négociations.
+**Suppression de compte.** Exigée par le règlement « Données utilisateur » de Google
+Play. Supprimer son propre compte demande le mot de passe, transmis dans le corps de
+la requête :
+
+```json
+DELETE /api/users/7
+{ "password": "..." }
+```
+
+Un mot de passe absent ou faux rend **403** — l'application y lit « mot de passe
+refusé » et non « session expirée », et ne déconnecte donc pas l'utilisateur. Un
+administrateur qui supprime le compte d'un tiers n'a pas à fournir de mot de passe.
+
+La suppression emporte : le compte, ses annonces **et leurs photos sur le disque**,
+les offres émises et reçues, les offres portant sur ses annonces, ses notifications,
+ses codes SMS, sa session et ses blocages. Les signalements, eux, sont **détachés et
+non effacés** — c'est ce qu'annonce la politique de confidentialité. Voir
+`Service/AccountDeletionService.java`.
+
+**Blocage.** Déclaré dans un sens, il s'applique dans les deux : les annonces d'un
+compte bloqué disparaissent de `/api/products/search`, ses offres de la file
+`/api/negotiations/product/{id}/queue`, et `POST /api/negotiations` rend 403 entre
+deux comptes dont l'un a bloqué l'autre.
+
+### Signalements
+
+| Méthode | Endpoint | Règle |
+|---|---|---|
+| POST | `/api/reports` | Tout compte authentifié |
+
+```json
+POST /api/reports
+{ "targetType": "PRODUCT", "targetId": 12, "reason": "SCAM", "details": "facultatif" }
+```
+
+`targetType` vaut `PRODUCT` ou `USER`. `reason` est l'un de `PROHIBITED`,
+`MISLEADING`, `SCAM`, `OFFENSIVE`, `SPAM`, `PERSONAL_DATA`, `OTHER` — tout autre motif
+rend 400. L'auteur du signalement vient du token, jamais du corps. On ne signale pas
+son propre contenu, et un même contenu re-signalé par la même personne n'encombre pas
+la file tant que le premier signalement attend.
 
 ### Notifications
 
@@ -126,6 +168,9 @@ cascade sur ses produits et ses négociations.
 | POST | `/api/users` | Créer un compte |
 | PUT | `/api/users/{id}/role` | Changer le rôle (`USER` / `ADMIN`) |
 | PUT | `/api/products/admin/{id}` | Modifier n'importe quel produit |
+| GET | `/api/reports` | File de modération — `?status=PENDING\|REVIEWING\|ACTIONED\|REJECTED` |
+| GET | `/api/reports/pending/count` | Ce qui attend d'être examiné |
+| PATCH | `/api/reports/{id}` | Consigner le traitement : `{ "status": "ACTIONED", "resolution": "..." }` |
 | POST | `/api/admin/notifications/broadcast` | Notifier tous les utilisateurs |
 | GET | `/api/admin/notifications/fcm-status` · `/test-fcm/{userId}` | Diagnostic Firebase |
 | * | `/api/fcm-test/**` | Diagnostic Firebase détaillé |

@@ -3,7 +3,9 @@ package com.project.RecyConnect.Controller;
 import com.project.RecyConnect.DTO.EarningsDTO;
 import com.project.RecyConnect.DTO.NegotiationDTO;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Service.ModerationService;
 import com.project.RecyConnect.Service.NegotiationService;
+import com.project.RecyConnect.Service.ProductService;
 import com.project.RecyConnect.Service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/negotiations")
@@ -18,10 +22,17 @@ public class NegotiationController {
 
     private final NegotiationService service;
     private final UserService userService;
+    private final ProductService productService;
+    private final ModerationService moderationService;
 
-    public NegotiationController(NegotiationService service, UserService userService) { 
+    public NegotiationController(NegotiationService service,
+                                 UserService userService,
+                                 ProductService productService,
+                                 ModerationService moderationService) {
         this.service = service;
         this.userService = userService;
+        this.productService = productService;
+        this.moderationService = moderationService;
     }
 
     @GetMapping
@@ -50,9 +61,27 @@ public class NegotiationController {
         return service.findByProductId(productId, status);
     }
 
+    /**
+     * Les offres en attente sur une annonce.
+     *
+     * <p>Celles des comptes bloques n'y figurent pas : bloquer quelqu'un doit
+     * faire disparaitre ses offres comme ses annonces, sans quoi le blocage ne
+     * vaudrait que sur la moitie de l'application.
+     */
     @GetMapping("/product/{productId}/queue")
     public List<NegotiationDTO> getQueueByProduct(@PathVariable Long productId) {
-        return service.getQueueByProductId(productId);
+        List<NegotiationDTO> queue = service.getQueueByProductId(productId);
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return queue;
+        }
+        Set<Long> hidden = moderationService.hiddenUserIds(currentUser.getId());
+        if (hidden.isEmpty()) {
+            return queue;
+        }
+        return queue.stream()
+                .filter(offer -> !hidden.contains(offer.getSenderId()))
+                .collect(Collectors.toList());
     }
 
     @PostMapping
@@ -61,6 +90,16 @@ public class NegotiationController {
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        // Un blocage coupe l'interaction dans les deux sens : sans ce controle,
+        // un compte bloque pouvait continuer a faire des offres — et donc a
+        // declencher des notifications — chez celui qui l'avait bloque.
+        Long sellerId = productService.findById(dto.getProductId())
+                .map(product -> product.getUserId())
+                .orElse(null);
+        if (sellerId != null && moderationService.isBlockedBetween(currentUser.getId(), sellerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         dto.setSenderId(currentUser.getId());
         try {
             return ResponseEntity.ok(service.save(dto));
