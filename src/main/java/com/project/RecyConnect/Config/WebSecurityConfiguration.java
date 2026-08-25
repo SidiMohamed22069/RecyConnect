@@ -44,6 +44,15 @@ public class WebSecurityConfiguration {
                         .requestMatchers("/api/auth/**", "/ws/**", "/error", "/favicon.ico")
                         .permitAll()
 
+                        // Pages legales (src/main/resources/static/legal/).
+                        // Google Play exige qu'elles soient atteignables SANS
+                        // installer l'application, et sans compte : ce sont les
+                        // URL declarees dans "Contenu de l'application" et dans
+                        // LegalLinks cote mobile. Derriere une authentification,
+                        // elles rendraient 401 au reviseur.
+                        .requestMatchers(HttpMethod.GET, "/legal", "/legal/", "/legal/**")
+                        .permitAll()
+
                         // --- Lecture publique: uniquement le catalogue ---
                         // Volontairement retires de cette liste:
                         //  - /api/notifications/**  : boites de reception privees
