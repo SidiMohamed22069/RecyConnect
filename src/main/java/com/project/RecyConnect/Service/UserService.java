@@ -46,6 +46,7 @@ public class UserService implements UserDetailsService {
         dto.setPhone(u.getPhone());
         dto.setImageData(u.getImageData());
         dto.setRole(u.getRole());
+        dto.setCreatedAt(u.getCreatedAt());
         return dto;
     }
 
@@ -66,17 +67,52 @@ public class UserService implements UserDetailsService {
         return userRepository.findById(id).map(this::toDTO);
     }
 
-    public UserDTO save(UserDTO dto) {
-        if (dto.getId() != null) {
-            return userRepository.findById(dto.getId()).map(existing -> {
-                if (dto.getUsername() != null) existing.setUsername(dto.getUsername());
-                if (dto.getPhone() != null) existing.setPhone(dto.getPhone());
-                if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
-                User saved = userRepository.save(existing);
-                return toDTO(saved);
-            }).orElseThrow(() -> new RuntimeException("User not found"));
-        }
-        throw new RuntimeException("Cannot create user via this method - use register endpoint");
+    /** Vrai si un compte porte deja ce numero de telephone. */
+    public boolean phoneExists(Long phone) {
+        return phone != null && userRepository.findByPhone(phone) != null;
+    }
+
+    /** Vrai si un compte porte deja ce nom d'utilisateur. */
+    public boolean usernameExists(String username) {
+        return username != null && userRepository.findByUsername(username) != null;
+    }
+
+    /**
+     * Cree un compte depuis le panneau d'administration.
+     *
+     * <p>Contrairement a l'inscription mobile, aucun code SMS n'est envoye:
+     * l'administrateur choisit le mot de passe et le compte est utilisable
+     * immediatement. C'est l'appelant qui verifie l'unicite du numero et du
+     * nom, et qui a deja le role ADMIN.
+     *
+     * <p>Le mot de passe arrive <em>deja hache</em>. Le hachage reste au
+     * controleur parce qu'y injecter le {@code PasswordEncoder} ici fermerait
+     * un cycle de dependances: WebSecurityConfiguration declare ce bean et
+     * exige JwtRequestFilter, qui exige a son tour ce service.
+     */
+    public UserDTO createAccount(String username, Long phone, String encodedPassword, Role role) {
+        User user = User.builder()
+                .username(username)
+                .phone(phone)
+                .pwd(encodedPassword)
+                .role(role == null ? Role.USER : role)
+                .imageData(User.DEFAULT_IMAGE_DATA)
+                .build();
+        return toDTO(userRepository.save(user));
+    }
+
+    /**
+     * Remplace le mot de passe d'un compte, deja hache par l'appelant.
+     *
+     * <p>Sert a la reinitialisation par un administrateur quand un utilisateur
+     * ne recoit plus ses SMS. Revoquer ses sessions est la responsabilite de
+     * l'appelant, qui seul sait s'il faut deconnecter le compte.
+     */
+    public void setPassword(Long id, String encodedPassword) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setPwd(encodedPassword);
+        userRepository.save(user);
     }
 
     public UserDTO update(Long id, UserDTO dto) {

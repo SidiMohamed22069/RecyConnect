@@ -9,6 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -48,6 +49,25 @@ public class User implements UserDetails {
     private List<Negotiation> negotiationsReceived;
     
     private String fcmToken; // Token FCM pour les notifications push
+
+    /**
+     * Date d'ouverture du compte.
+     *
+     * <p>Le panneau d'administration affiche une colonne "inscrit le" et calcule
+     * l'evolution des inscriptions: sans cette date, les deux restaient vides.
+     * Nulle pour les comptes crees avant l'ajout de la colonne — les clients
+     * affichent alors "-" plutot qu'une date inventee.
+     */
+    @Column(updatable = false)
+    private OffsetDateTime createdAt;
+
+    /** Horodate une insertion, sans dependre de l'appelant pour y penser. */
+    @PrePersist
+    void stampCreatedAt() {
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+    }
 
 
     @Override

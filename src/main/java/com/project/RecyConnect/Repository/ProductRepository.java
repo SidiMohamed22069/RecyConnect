@@ -14,6 +14,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByUserId(Long userId);
     List<Product> findByCategoryId(Long categoryId);
 
+    /** Nombre d'annonces rattachees a une categorie, avant de la supprimer. */
+    long countByCategoryId(Long categoryId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id")
     Optional<Product> findByIdForUpdate(@Param("id") Long id);

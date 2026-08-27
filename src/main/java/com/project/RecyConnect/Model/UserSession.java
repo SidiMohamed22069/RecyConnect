@@ -45,6 +45,25 @@ public class UserSession {
     @Column(nullable = false)
     private Long sessionVersion;
 
+    /**
+     * Empreinte SHA-256 du jeton de rafraichissement en cours (cf. H4 de
+     * l'audit mobile).
+     *
+     * <p>Le jeton lui-meme n'est jamais stocke: il vaut un mot de passe, il
+     * ouvre une session a lui seul. Une fuite de la base ne doit pas suffire a
+     * rejouer les sessions ouvertes.
+     *
+     * <p>Nul tant qu'aucun jeton n'a ete emis, et remis a nul des que la
+     * session est remplacee ou le jeton perime. La contrainte d'unicite est
+     * ce qui permet de retrouver la session a partir du jeton presente ;
+     * PostgreSQL ne fait pas entrer les valeurs nulles en conflit.
+     */
+    @Column(length = 64, unique = true)
+    private String refreshTokenHash;
+
+    /** Fin de validite du jeton ci-dessus. */
+    private OffsetDateTime refreshTokenExpiresAt;
+
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;

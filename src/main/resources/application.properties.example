@@ -28,6 +28,13 @@ jwt.secret=${JWT_SECRET}
 # Duree de validite d'un token en minutes (1380 = 23 h)
 jwt.expiration-minutes=${JWT_EXPIRATION_MINUTES:1380}
 
+# Duree de vie du jeton de rafraichissement, en jours (point H4 de l'audit
+# mobile). Long par construction: c'est ce qui evite de redemander le mot de
+# passe a chaque expiration du jeton d'acces. La revocation ne repose pas sur
+# cette duree mais sur la session — deconnexion, connexion depuis un autre
+# appareil ou reinitialisation du mot de passe l'invalident immediatement.
+jwt.refresh-expiration-days=${JWT_REFRESH_EXPIRATION_DAYS:30}
+
 # --- Compte administrateur d'amorcage ---
 # Cree au demarrage si le numero n'est pas deja pris (voir AdminSeeder).
 # Indispensable sur une base neuve: /api/auth/register-admin exige deja un ADMIN.

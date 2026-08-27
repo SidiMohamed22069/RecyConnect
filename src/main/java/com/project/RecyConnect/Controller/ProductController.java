@@ -80,9 +80,15 @@ public class ProductController {
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        // Définir automatiquement l'utilisateur connecté comme propriétaire du produit
-        dto.setUserId(currentUser.getId());
-        return ResponseEntity.ok(service.save(dto));
+        // Le proprietaire est l'auteur de l'appel — sauf pour un administrateur,
+        // qui publie depuis le panneau au nom d'un vendeur reel. Ecraser userId
+        // sans distinction rattachait au compte admin toutes les annonces
+        // saisies pour autrui.
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        if (!isAdmin || dto.getUserId() == null) {
+            dto.setUserId(currentUser.getId());
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.save(dto));
     }
 
     @PutMapping("/{id}")

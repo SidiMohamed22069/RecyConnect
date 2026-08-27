@@ -45,6 +45,11 @@ public class UserSessionService {
             current.setDeviceName(deviceName);
             current.setFcmToken(fcmToken);
             current.setSessionVersion(nextVersion);
+            // Le jeton de rafraichissement appartient a la session remplacee.
+            // Le laisser en place laisserait l'ancien appareil se refabriquer
+            // un jeton d'acces valide apres avoir ete deconnecte (H4).
+            current.setRefreshTokenHash(null);
+            current.setRefreshTokenExpiresAt(null);
             return new SessionReplacementResult(current, previousFcmToken);
         }
 
