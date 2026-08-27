@@ -79,7 +79,8 @@ connue.
 | `SPRING_DATASOURCE_PASSWORD` | **oui** en prod | `1234` | Mot de passe PostgreSQL |
 | `SPRING_DATASOURCE_URL` | non | `jdbc:postgresql://localhost:5432/RecyConnect` | URL JDBC |
 | `SPRING_DATASOURCE_USERNAME` | non | `postgres` | Utilisateur PostgreSQL |
-| `JWT_EXPIRATION_MINUTES` | non | `1380` (23 h) | Durée de validité d'un token |
+| `JWT_EXPIRATION_MINUTES` | non | `1380` (23 h) | Durée de validité d'un token d'accès |
+| `JWT_REFRESH_EXPIRATION_DAYS` | non | `30` | Durée de validité d'un jeton de rafraîchissement. La révocation ne dépend pas de cette durée mais de la session |
 | `SERVER_PORT` | non | `8081` | Port d'écoute |
 | `APP_CLIENT_URL` | **oui** en prod | `http://localhost:4200` | Origines autorisées par le CORS, séparées par des virgules. **Ne jamais mettre `*`** |
 | `APP_SERVER_URL` | **oui** en prod | `http://localhost` | URL publique, utilisée pour construire les liens de fichiers |
@@ -219,6 +220,53 @@ Authorization: Bearer <token>
 X-Device-Id: <le deviceId de la session>
 ```
 
+### Renouvellement du jeton d'accès
+
+Un jeton d'accès dure 23 heures. À son expiration, l'application mobile recevait
+un 401 et renvoyait l'utilisateur à l'écran de connexion — au milieu d'une
+négociation le cas échéant. C'est le point **H4** de l'audit mobile.
+
+La connexion et l'inscription renvoient désormais un `refreshToken` à côté du
+`token` :
+
+```jsonc
+{
+  "token": "eyJhbGciOi…",        // jeton d'accès, 23 h
+  "refreshToken": "kQ7f…",       // jeton de rafraîchissement, 30 j
+  "userId": 7, "username": "…", "phone": 22233445566, "role": "USER"
+}
+```
+
+À l'expiration, l'application échange le second contre un nouveau couple :
+
+```http
+POST /api/auth/refresh
+X-Device-Id: <le deviceId de la session>
+
+{ "refreshToken": "kQ7f…" }
+```
+
+| Réponse | Quand | Ce que fait l'application |
+|---|---|---|
+| `200` | Jeton valide, bon appareil | Remplace ses deux jetons et rejoue la requête d'origine |
+| `401` | Jeton inconnu, périmé, ou appareil différent | Efface la session et repart sur l'écran de connexion |
+| `400` | `refreshToken` absent du corps | Défaut d'appelant, pas une session invalide |
+
+Trois propriétés tiennent la sécurité du mécanisme :
+
+- **Rien en clair en base.** Seule l'empreinte SHA-256 est stockée
+  (`user_sessions.refresh_token_hash`). Un jeton de rafraîchissement vaut un mot
+  de passe : une fuite de la base ne doit pas rouvrir les sessions.
+- **Rotation à chaque usage.** Le jeton présenté est invalidé et remplacé. Un
+  jeton intercepté puis rejoué ne vaut plus rien — et l'appareil légitime perd sa
+  session, ce qui rend le vol visible plutôt que silencieux.
+- **Lié à l'appareil.** `X-Device-Id` est vérifié contre la session, comme sur
+  toute requête authentifiée. Voler le jeton ne suffit pas.
+
+Le jeton vit sur la session : il meurt donc exactement quand elle meurt —
+déconnexion, connexion depuis un autre appareil, réinitialisation du mot de
+passe. Aucune liste de révocation à maintenir.
+
 ### Réinitialisation du mot de passe
 
 ```
@@ -234,7 +282,7 @@ X-Device-Id: <le deviceId de la session>
 
 | Endpoint | Description |
 |---|---|
-| `POST /api/auth/**` | Inscription, connexion, code SMS, réinitialisation |
+| `POST /api/auth/**` | Inscription, connexion, code SMS, réinitialisation, renouvellement de jeton |
 | `GET /api/categories/**` | Catalogue des catégories, libellés `nameFr` / `nameAr` / `nameEn` inclus |
 | `GET /api/products` · `/{id}` · `/search` | Catalogue des produits |
 | `GET /api/products/category/{id}` · `/user/{id}` | Produits par catégorie ou vendeur |

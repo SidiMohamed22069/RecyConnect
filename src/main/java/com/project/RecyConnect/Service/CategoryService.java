@@ -3,6 +3,7 @@ package com.project.RecyConnect.Service;
 import com.project.RecyConnect.DTO.CategoryDTO;
 import com.project.RecyConnect.Model.Category;
 import com.project.RecyConnect.Repository.CategoryRepository;
+import com.project.RecyConnect.Repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,9 +13,11 @@ import java.util.stream.Collectors;
 @Service
 public class CategoryService {
     private final CategoryRepository repo;
+    private final ProductRepository productRepo;
 
-    public CategoryService(CategoryRepository repo) {
+    public CategoryService(CategoryRepository repo, ProductRepository productRepo) {
         this.repo = repo;
+        this.productRepo = productRepo;
     }
 
     private CategoryDTO toDTO(Category c) {
@@ -81,7 +84,20 @@ public class CategoryService {
         }).orElseThrow(() -> new RuntimeException("Category not found"));
     }
 
+    /**
+     * Supprime une categorie vide.
+     *
+     * <p>Une categorie encore utilisee est refusee: {@code deleteById} echouait
+     * sur la contrainte d'integrite et rendait une 500 illisible, la ou
+     * l'appelant a besoin de savoir que des annonces bloquent la suppression.
+     *
+     * @throws IllegalStateException si des annonces s'y rattachent encore.
+     */
     public void delete(Long id) {
+        long inUse = productRepo.countByCategoryId(id);
+        if (inUse > 0) {
+            throw new IllegalStateException(inUse + " product(s) still use this category");
+        }
         repo.deleteById(id);
     }
 }

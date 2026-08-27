@@ -72,11 +72,7 @@ public class PhoneVerificationService {
             throw new RuntimeException("Le numéro doit être un numéro mauritanien valide (+222XXXXXXXX)");
         }
 
-        // Enlever le préfixe 222 pour le stockage
-        String phoneWithoutPrefix = normalizedPhone.startsWith("222") 
-            ? normalizedPhone.substring(3) 
-            : normalizedPhone;
-        Long phoneLong = Long.parseLong(phoneWithoutPrefix);
+        Long phoneLong = Long.parseLong(toLocalPhone(normalizedPhone));
 
         // Vérification conditionnelle selon le contexte (inscription ou oubli de mot de passe)
         if (Boolean.TRUE.equals(isForgetPassword)) {
@@ -138,6 +134,26 @@ public class PhoneVerificationService {
         }
         
         return cleaned;
+    }
+
+    /**
+     * Numero local a huit chiffres, tel qu'il est stocke en base.
+     *
+     * <p>L'indicatif n'est retire que de la forme internationale complete
+     * (222 suivi de huit chiffres). L'ancienne regle ne testait que le debut
+     * de la chaine, si bien qu'un numero local commencant par 222 — ils sont
+     * legitimes en Mauritanie — etait ampute: 22233344 devenait 33344. Le
+     * compte n'etait alors plus retrouve, et son proprietaire ne pouvait plus
+     * se connecter du tout.
+     */
+    public static String toLocalPhone(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        String digits = phone.trim();
+        return digits.length() == 11 && digits.startsWith("222")
+                ? digits.substring(3)
+                : digits;
     }
 
     /**

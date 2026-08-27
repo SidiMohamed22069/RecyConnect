@@ -9,6 +9,7 @@ import com.project.RecyConnect.DTO.BlockedUserDTO;
 import com.project.RecyConnect.Security.JwtUtil;
 import com.project.RecyConnect.Service.AccountDeletionService;
 import com.project.RecyConnect.Service.ModerationService;
+import com.project.RecyConnect.Service.PhoneVerificationService;
 import com.project.RecyConnect.Service.UserService;
 import com.project.RecyConnect.Service.UserSessionService;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,9 @@ public class UserController {
     private final AccountDeletionService accountDeletionService;
     private final ModerationService moderationService;
     private final PasswordEncoder passwordEncoder;
+
+    /** Longueur minimale d'un mot de passe, alignee sur l'inscription mobile. */
+    private static final int MIN_PASSWORD_LENGTH = 6;
 
     public UserController(UserService service,
                           JwtUtil jwtUtil,
@@ -57,9 +61,89 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * Creation d'un compte par un administrateur.
+     *
+     * <p>L'inscription mobile ({@code /api/auth/register}) ne convient pas ici:
+     * elle envoie un code par SMS au futur utilisateur, que l'administrateur
+     * n'a pas sous la main. Le mot de passe est donc choisi par l'appelant et
+     * le compte est utilisable immediatement.
+     */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public UserDTO create(@RequestBody UserDTO dto) { return service.save(dto); }
+    public ResponseEntity<?> create(@RequestBody UserDTO dto) {
+        if (dto.getUsername() == null || dto.getUsername().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Username is required"));
+        }
+        if (dto.getPassword() == null || dto.getPassword().length() < MIN_PASSWORD_LENGTH) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Password must be at least " + MIN_PASSWORD_LENGTH + " characters"));
+        }
+
+        Long phone = normalizePhone(dto.getPhone());
+        if (phone == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Numero de telephone invalide"));
+        }
+
+        String username = dto.getUsername().trim();
+        if (service.phoneExists(phone)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Phone number already exists"));
+        }
+        if (service.usernameExists(username)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Username already exists"));
+        }
+
+        UserDTO created = service.createAccount(
+                username, phone, passwordEncoder.encode(dto.getPassword()), dto.getRole());
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /**
+     * Reinitialisation du mot de passe d'un compte par un administrateur.
+     *
+     * <p>Le chemin normal passe par un code SMS ({@code /api/auth/reset-password}).
+     * Celui-ci existe pour les comptes qui ne recoivent plus leurs SMS. Les
+     * sessions ouvertes sont revoquees: un mot de passe remplace doit
+     * deconnecter les appareils qui se servaient de l'ancien.
+     */
+    @PatchMapping("/{id}/password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> resetPassword(@PathVariable Long id,
+                                           @RequestBody(required = false) PasswordResetRequest request) {
+        String password = request == null ? null : request.getPassword();
+        if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Password must be at least " + MIN_PASSWORD_LENGTH + " characters"));
+        }
+
+        try {
+            service.setPassword(id, passwordEncoder.encode(password));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+
+        userSessionService.revokeAllSessionsForUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Numero tel qu'il est stocke: huit chiffres, sans l'indicatif 222.
+     *
+     * <p>Meme normalisation que l'inscription mobile, pour qu'un compte cree
+     * ici puisse se connecter avec le numero que son proprietaire compose.
+     */
+    private Long normalizePhone(Long phone) {
+        if (phone == null) {
+            return null;
+        }
+        String digits = PhoneVerificationService.toLocalPhone(String.valueOf(phone));
+        return digits != null && digits.matches("[0-9]{8}")
+                ? Long.parseLong(digits)
+                : null;
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody UserDTO dto) {
@@ -238,11 +322,21 @@ public class UserController {
     /**
      * Changer le rôle d'un utilisateur (réservé aux admins)
      */
-    @PutMapping("/{id}/role")
+    @RequestMapping(value = "/{id}/role", method = { RequestMethod.PUT, RequestMethod.PATCH })
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody RoleUpdateDTO dto) {
         try {
             Role newRole = Role.valueOf(dto.getRole().toUpperCase());
+
+            // Un administrateur ne peut pas se retirer ses propres droits: le
+            // panneau l'interdit deja dans l'interface, mais la garantie doit
+            // etre ici, sous peine de se retrouver sans aucun administrateur.
+            User currentUser = service.getCurrentUser();
+            if (newRole != Role.ADMIN && currentUser != null && currentUser.getId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "An administrator cannot revoke their own privileges"));
+            }
+
             UserDTO updatedUser = service.updateRole(id, newRole);
             return ResponseEntity.ok(Map.of(
                 "message", "Role updated successfully",
@@ -260,6 +354,12 @@ public class UserController {
     @lombok.Data
     public static class RoleUpdateDTO {
         private String role;
+    }
+
+    /** Le mot de passe qu'un administrateur impose a un compte. */
+    @lombok.Data
+    public static class PasswordResetRequest {
+        private String password;
     }
 
     /** Le mot de passe qui accompagne une suppression de compte. */

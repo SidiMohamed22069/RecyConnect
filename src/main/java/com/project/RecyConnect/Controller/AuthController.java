@@ -9,6 +9,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +28,7 @@ import com.project.RecyConnect.Repository.UserRepo;
 import com.project.RecyConnect.Security.JwtUtil;
 import com.project.RecyConnect.Service.FCMService;
 import com.project.RecyConnect.Service.PhoneVerificationService;
+import com.project.RecyConnect.Service.RefreshTokenService;
 import com.project.RecyConnect.Service.UserSessionService;
 
 import lombok.RequiredArgsConstructor;
@@ -40,7 +44,11 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final PhoneVerificationService phoneVerificationService;
     private final UserSessionService userSessionService;
+    private final RefreshTokenService refreshTokenService;
     private final FCMService fcmService;
+
+    /** Longueur minimale d'un mot de passe, alignee sur l'inscription mobile. */
+    private static final int MIN_PASSWORD_LENGTH = 6;
 
     /**
      * Étape 1: Envoyer un code de vérification au numéro de téléphone
@@ -64,12 +72,8 @@ public class AuthController {
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@RequestBody AuthDTO.VerifyCodeRequest request) {
         try {
-            // Enlever le préfixe 222 si présent
-            String phoneStr = request.getPhone();
-            Long phoneToVerify = Long.parseLong(phoneStr);
-            if (phoneStr.startsWith("222")) {
-                phoneToVerify = Long.parseLong(phoneStr.substring(3));
-            }
+            Long phoneToVerify = Long.parseLong(
+                    PhoneVerificationService.toLocalPhone(request.getPhone()));
             
             boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
                 phoneToVerify, request.getCode());
@@ -107,14 +111,8 @@ public class AuthController {
 
         Long phoneNumberToSave;
         try {
-            // Enlever le préfixe 222 pour la sauvegarde et la vérification
-            String phoneStr = request.getPhone();
-            Long phoneNumber = Long.parseLong(phoneStr);
-            if (phoneStr.startsWith("222")) {
-                phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
-            } else {
-                phoneNumberToSave = phoneNumber;
-            }
+            phoneNumberToSave = Long.parseLong(
+                    PhoneVerificationService.toLocalPhone(request.getPhone()));
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
@@ -184,8 +182,14 @@ public class AuthController {
             token = jwtUtil.generateToken(savedUser);
         }
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthDTO.AuthResponse(token, savedUser.getId(), savedUser.getUsername(), savedUser.getPhone(), savedUser.getRole().name(), "Registration successful"));
+        AuthDTO.AuthResponse body = new AuthDTO.AuthResponse(
+                token, savedUser.getId(), savedUser.getUsername(), savedUser.getPhone(),
+                savedUser.getRole().name(), "Registration successful");
+        // Nul quand l'inscription n'a pas ouvert de session unique (pas de
+        // fcmToken): il n'y a alors rien a rafraichir.
+        body.setRefreshToken(refreshTokenService.issueFor(savedUser.getId()));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     /**
@@ -196,13 +200,8 @@ public class AuthController {
     public ResponseEntity<?> registerAdmin(@RequestBody AuthDTO.RegisterRequest request) {
         Long phoneNumberToSave;
         try {
-            String phoneStr = request.getPhone();
-            Long phoneNumber = Long.parseLong(phoneStr);
-            if (phoneStr.startsWith("222")) {
-                phoneNumberToSave = Long.parseLong(phoneStr.substring(3));
-            } else {
-                phoneNumberToSave = phoneNumber;
-            }
+            phoneNumberToSave = Long.parseLong(
+                    PhoneVerificationService.toLocalPhone(request.getPhone()));
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Numéro de téléphone invalide"));
@@ -247,12 +246,8 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("deviceId and fcmToken are required"));
         }
 
-        // Enlever le préfixe 222 si présent
-        Long phoneToSearch = request.getPhone();
-        String phoneStr = String.valueOf(request.getPhone());
-        if (phoneStr.startsWith("222")) {
-            phoneToSearch = Long.parseLong(phoneStr.substring(3));
-        }
+        Long phoneToSearch = Long.parseLong(PhoneVerificationService
+                .toLocalPhone(String.valueOf(request.getPhone())));
         
         // Find user by phone (sans préfixe 222)
         User user = userRepository.findByPhone(phoneToSearch);
@@ -285,14 +280,78 @@ public class AuthController {
         UserSession session = sessionResult.session();
         String token = jwtUtil.generateToken(user, session.getSessionVersion(), session.getDeviceId());
 
-        return ResponseEntity.ok(new AuthDTO.AuthResponse(
+        AuthDTO.AuthResponse body = new AuthDTO.AuthResponse(
             token, 
             user.getId(), 
             user.getUsername(), 
             user.getPhone(), 
             user.getRole().name(), 
             "Login successful"
-        ));
+        );
+        body.setRefreshToken(refreshTokenService.issueFor(user.getId()));
+
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * Renouvelle un jeton d'acces expire sans redemander le mot de passe.
+     *
+     * <p>Point H4 de l'audit mobile: le jeton d'acces dure 23 heures, et a son
+     * expiration l'application ejectait l'utilisateur vers l'ecran de connexion,
+     * au milieu d'une negociation le cas echeant. Elle intercepte desormais le
+     * 401, appelle ce point d'entree une fois, rejoue la requete d'origine, et
+     * ne deconnecte que si le renouvellement echoue.
+     *
+     * <p>Les refus rendent <b>401</b> — jeton inconnu, perime, ou appareil qui
+     * n'est plus celui de la session. C'est ce code que l'application traite
+     * comme "session terminee": elle efface ses jetons et repart sur l'ecran de
+     * connexion, exactement comme avant ce point. Un corps mal forme rend 400:
+     * c'est un defaut d'appelant, pas une session invalide.
+     *
+     * <p>Aucun jeton d'acces n'est exige ici, et c'est le principe meme: celui
+     * de l'appelant vient d'expirer. La preuve est le jeton de rafraichissement,
+     * double de l'appareil enregistre.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(
+            @RequestBody(required = false) AuthDTO.RefreshRequest request,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceIdHeader) {
+
+        String presented = request == null ? null : request.getRefreshToken();
+        if (presented == null || presented.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("refreshToken is required"));
+        }
+
+        RefreshTokenService.RefreshOutcome outcome =
+                refreshTokenService.rotate(presented, deviceIdHeader).orElse(null);
+        if (outcome == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("Refresh token invalid or expired"));
+        }
+
+        User user = userRepository.findById(outcome.userId()).orElse(null);
+        if (user == null) {
+            // Compte supprime alors que la session survivait: rien a renouveler.
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("Refresh token invalid or expired"));
+        }
+
+        // Meme sessionVersion et meme deviceId: le renouvellement prolonge la
+        // session, il n'en ouvre pas une nouvelle. La faire tourner couperait
+        // le WebSocket et les jetons encore en vol de cet appareil.
+        String token = jwtUtil.generateToken(user, outcome.sessionVersion(), outcome.deviceId());
+
+        AuthDTO.AuthResponse body = new AuthDTO.AuthResponse(
+                token,
+                user.getId(),
+                user.getUsername(),
+                user.getPhone(),
+                user.getRole().name(),
+                "Token refreshed");
+        body.setRefreshToken(outcome.refreshToken());
+
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping("/logout")
@@ -336,13 +395,8 @@ public class AuthController {
 
         Long phoneToSearch;
         try {
-            String phoneStr = request.getPhone();
-            Long parsedPhone = Long.parseLong(phoneStr);
-            if (phoneStr.startsWith("222")) {
-                phoneToSearch = Long.parseLong(phoneStr.substring(3));
-            } else {
-                phoneToSearch = parsedPhone;
-            }
+            phoneToSearch = Long.parseLong(
+                    PhoneVerificationService.toLocalPhone(request.getPhone()));
         } catch (NumberFormatException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
@@ -369,6 +423,58 @@ public class AuthController {
         userSessionService.revokeAllSessionsForUser(user.getId());
 
         return ResponseEntity.ok(new AuthDTO.AuthResponse("Password updated successfully"));
+    }
+
+    /**
+     * Changement de son propre mot de passe, pour un compte deja connecte.
+     *
+     * <p>Distinct de {@code /reset-password}, qui exige un code SMS: envoyer un
+     * SMS a quelqu'un qui vient de prouver son identite n'apporte rien. C'est
+     * l'ancien mot de passe qui sert de preuve.
+     *
+     * <p>{@code /api/auth/**} est public dans la configuration de securite,
+     * donc l'identite est relue du contexte rempli par {@code JwtRequestFilter}:
+     * sans jeton valide, la requete repart en 401 sans rien lire du corps.
+     *
+     * <p>Un ancien mot de passe faux rend <b>400</b>, pas 401. Un 401 signifie
+     * "session invalide" pour les clients, qui purgent alors la session et
+     * renvoient vers l'ecran de connexion — or ici la session est parfaitement
+     * valide, c'est la saisie qui est fausse.
+     *
+     * <p>Les sessions ne sont pas revoquees: celle qui appelle est la seule
+     * ouverte (le modele n'en autorise qu'une par compte) et elle vient de
+     * prouver qu'elle connait le mot de passe.
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody(required = false) AuthDTO.ChangePasswordRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetails principal)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDTO.AuthResponse("Authentication required"));
+        }
+
+        String newPassword = request == null ? null : request.getNewPassword();
+        if (newPassword == null || newPassword.length() < MIN_PASSWORD_LENGTH) {
+            return ResponseEntity.badRequest().body(new AuthDTO.AuthResponse(
+                    "Password must be at least " + MIN_PASSWORD_LENGTH + " characters"));
+        }
+
+        User user = userRepository.findByUsername(principal.getUsername());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthDTO.AuthResponse("User not found"));
+        }
+
+        String currentPassword = request.getCurrentPassword();
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+            return ResponseEntity.badRequest()
+                    .body(new AuthDTO.AuthResponse("Current password is incorrect"));
+        }
+
+        user.setPwd(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

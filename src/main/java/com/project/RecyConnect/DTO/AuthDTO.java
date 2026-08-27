@@ -1,5 +1,7 @@
 package com.project.RecyConnect.DTO;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -53,6 +55,33 @@ public class AuthDTO {
         private String code;
     }
 
+    /**
+     * Changement de mot de passe par un utilisateur deja connecte.
+     *
+     * <p>Distinct de {@link ResetPasswordRequest}, qui s'appuie sur un code SMS:
+     * ici c'est l'ancien mot de passe qui fait office de preuve.
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ChangePasswordRequest {
+        private String currentPassword;
+        private String newPassword;
+    }
+
+    /**
+     * Renouvellement d'un jeton d'acces expire (point H4 de l'audit mobile).
+     *
+     * <p>L'en-tete {@code X-Device-Id} accompagne l'appel: il est verifie
+     * contre l'appareil de la session, comme sur toute requete authentifiee.
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RefreshRequest {
+        private String refreshToken;
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -70,6 +99,15 @@ public class AuthDTO {
         private Long phone;
         private String role;
         private String message;
+
+        /**
+         * Jeton de rafraichissement, renseigne uniquement par les reponses qui
+         * en emettent un: connexion, inscription et {@code /refresh}. Absent
+         * du JSON partout ailleurs — le rendre a chaque reponse en multiplierait
+         * les occasions de fuite pour rien.
+         */
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private String refreshToken;
 
         public AuthResponse(String token, Long userId, String username, Long phone, String role, String message) {
             this.token = token;
