@@ -1,6 +1,8 @@
 package com.project.RecyConnect.Model;
 
 import org.junit.jupiter.api.BeforeEach;
+import java.time.OffsetDateTime;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -305,6 +307,8 @@ class UserTest {
 
     @Test
     void testAllArgsConstructor() {
+        OffsetDateTime createdAt = OffsetDateTime.parse("2026-08-27T10:00:00Z");
+
         User fullUser = new User(
                 1L,                    // id
                 "fulluser",            // username
@@ -315,15 +319,41 @@ class UserTest {
                 null,                  // products
                 null,                  // negotiationsSent
                 null,                  // negotiationsReceived
-                null                   // fcmToken
+                null,                  // fcmToken
+                createdAt              // createdAt
         );
-        
+
         assertEquals(1L, fullUser.getId());
         assertEquals("fulluser", fullUser.getUsername());
         assertEquals(212612345678L, fullUser.getPhone());
         assertEquals("imagedata", fullUser.getImageData());
         assertEquals("password", fullUser.getPassword());
         assertEquals(Role.USER, fullUser.getRole());
+        assertEquals(createdAt, fullUser.getCreatedAt());
+    }
+
+    // ==================== Tests pour createdAt ====================
+
+    @Test
+    void testCreatedAtIsStampedOnFirstPersist() {
+        User fresh = User.builder().username("fresh").build();
+        assertNull(fresh.getCreatedAt());
+
+        fresh.stampCreatedAt();
+
+        assertNotNull(fresh.getCreatedAt(),
+                "un compte doit porter sa date d'ouverture des l'insertion");
+    }
+
+    @Test
+    void testCreatedAtIsNotOverwritten() {
+        OffsetDateTime original = OffsetDateTime.parse("2026-01-15T08:30:00Z");
+        User imported = User.builder().username("imported").createdAt(original).build();
+
+        imported.stampCreatedAt();
+
+        assertEquals(original, imported.getCreatedAt(),
+                "une date deja connue ne doit pas etre ecrasee");
     }
 
     // ==================== Tests pour equals et hashCode (Lombok @Data) ====================
