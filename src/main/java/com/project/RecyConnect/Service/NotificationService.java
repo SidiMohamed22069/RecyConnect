@@ -2,6 +2,7 @@ package com.project.RecyConnect.Service;
 
 import com.project.RecyConnect.DTO.NotificationDTO;
 import com.project.RecyConnect.Model.Notification;
+import com.project.RecyConnect.Model.SupportedLanguage;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Repository.NotificationRepository;
 import com.project.RecyConnect.Repository.UserRepo;
@@ -19,15 +20,18 @@ public class NotificationService {
     private final FCMService fcmService;
     private final WebSocketService webSocketService;
     private final UserSessionManager sessionManager;
+    private final NotificationMessages messages;
 
     public NotificationService(NotificationRepository repo, UserRepo userRepo,
                                FCMService fcmService, WebSocketService webSocketService,
-                               UserSessionManager sessionManager) {
+                               UserSessionManager sessionManager,
+                               NotificationMessages messages) {
         this.repo = repo;
         this.userRepo = userRepo;
         this.fcmService = fcmService;
         this.webSocketService = webSocketService;
         this.sessionManager = sessionManager;
+        this.messages = messages;
     }
 
     private NotificationDTO toDTO(Notification n) {
@@ -152,24 +156,60 @@ public class NotificationService {
     }
     
     /**
+     * Envoie une notification redigee dans la langue de son DESTINATAIRE.
+     *
+     * <p>Remplace {@code sendNegotiationNotification(..., String title, String
+     * message)}, qui obligeait l'appelant a rediger le texte alors qu'il ne
+     * connaissait du destinataire que son identifiant — d'ou des notifications
+     * francaises pour tout le monde. Ici l'appelant declare ce qui s'est passe
+     * (le {@code type}) et les donnees variables ({@code args}); la langue est
+     * relue en base, puis appliquee une seule fois, ce qui garantit que le
+     * texte pousse par FCM et celui garde en base sont identiques.
+     *
+     * <p>La langue prise en compte est toujours celle du destinataire, jamais
+     * celle de l'auteur de l'action.
+     *
+     * @param args valeurs des emplacements {@code {0}}, {@code {1}}… du libelle
+     */
+    public void sendLocalizedNotification(Long receiverId, Long senderId,
+                                          Long relatedId, String type,
+                                          Object... args) {
+        dispatch(languageOf(receiverId), receiverId, senderId, relatedId, type, args);
+    }
+
+    /**
+     * Redige et envoie, la langue du destinataire etant deja connue.
+     *
+     * <p>Existe pour les appelants qui ont deja eu besoin de cette langue —
+     * ceux qui composent le texte avec le nom d'un tiers. Sans cette variante,
+     * chaque notification relisait deux fois le meme compte, et
+     * {@code notifyOutbidUsers} le fait pour toute une file d'offres.
+     */
+    private void dispatch(SupportedLanguage language, Long receiverId, Long senderId,
+                          Long relatedId, String type, Object... args) {
+        NotificationMessages.Text text = messages.textFor(type, language, args);
+
+        NotificationDTO notification = new NotificationDTO();
+        notification.setReceiverId(receiverId);
+        notification.setSenderId(senderId);
+        notification.setTitle(text.title());
+        notification.setMessage(text.body());
+        notification.setCreatedAt(OffsetDateTime.now());
+        notification.setType(type);
+        notification.setRelatedId(relatedId);
+        notification.setIsRead(false);
+
+        sendNotification(notification);
+    }
+
+    /**
      * Envoie notification quand une offre est créée
      */
     public void sendOfferNotification(Long receiverId, Long senderId, 
                                      Long negotiationId, String productTitle) {
-        User sender = userRepo.findById(senderId).orElse(null);
-        String senderName = sender != null ? sender.getUsername() : "Un utilisateur";
-        
-        NotificationDTO notification = new NotificationDTO();
-        notification.setReceiverId(receiverId);
-        notification.setSenderId(senderId);
-        notification.setTitle("Nouvelle offre reçue");
-        notification.setMessage(senderName + " vous a fait une offre pour: " + productTitle);
-        notification.setCreatedAt(OffsetDateTime.now());
-        notification.setType("OFFER_RECEIVED");
-        notification.setRelatedId(negotiationId);
-        notification.setIsRead(false);
-        
-        sendNotification(notification);
+        SupportedLanguage language = languageOf(receiverId);
+        dispatch(language, receiverId, senderId, negotiationId, "OFFER_RECEIVED",
+                nameOf(senderId, language), productTitle);
     }
     
     /**
@@ -177,41 +217,51 @@ public class NotificationService {
      */
     public void sendRefusalNotification(Long senderId, Long receiverId,
                                        Long negotiationId, String productTitle) {
-        User receiver = userRepo.findById(receiverId).orElse(null);
-        String receiverName = receiver != null ? receiver.getUsername() : "Un utilisateur";
-        
-        NotificationDTO notification = new NotificationDTO();
-        notification.setReceiverId(senderId);  // Le sender de l'offre reçoit la notification
-        notification.setSenderId(receiverId);
-        notification.setTitle("Offre refusée");
-        notification.setMessage(receiverName + " a refusé votre offre pour: " + productTitle);
-        notification.setCreatedAt(OffsetDateTime.now());
-        notification.setType("OFFER_REFUSED");
-        notification.setRelatedId(negotiationId);
-        notification.setIsRead(false);
-        
-        sendNotification(notification);
+        // Le sender de l'offre est celui qui recoit la notification: c'est donc
+        // sa langue, et le nom de l'autre partie, qui composent le texte.
+        SupportedLanguage language = languageOf(senderId);
+        dispatch(language, senderId, receiverId, negotiationId, "OFFER_REFUSED",
+                nameOf(receiverId, language), productTitle);
     }
 
-    public void sendNegotiationNotification(Long receiverId, Long senderId,
-                                            Long negotiationId, String type,
-                                            String title, String message) {
-        NotificationDTO notification = new NotificationDTO();
-        notification.setReceiverId(receiverId);
-        notification.setSenderId(senderId);
-        notification.setTitle(title);
-        notification.setMessage(message);
-        notification.setCreatedAt(OffsetDateTime.now());
-        notification.setType(type);
-        notification.setRelatedId(negotiationId);
-        notification.setIsRead(false);
+    /**
+     * La langue de notification d'un compte, francais a defaut.
+     *
+     * <p>Un destinataire introuvable — compte supprime entre l'evenement et
+     * l'envoi — ne doit pas interrompre la chaine: la notification part en
+     * francais et {@code sendNotification} constatera plus loin qu'il n'y a
+     * personne a qui la remettre.
+     */
+    private SupportedLanguage languageOf(Long userId) {
+        if (userId == null) {
+            return SupportedLanguage.DEFAULT;
+        }
+        return userRepo.findById(userId)
+                .map(SupportedLanguage::of)
+                .orElse(SupportedLanguage.DEFAULT);
+    }
 
-        sendNotification(notification);
+    /** Le nom d'un compte, ou un terme generique traduit s'il a disparu. */
+    private String nameOf(Long userId, SupportedLanguage language) {
+        if (userId == null) {
+            return messages.unknownSender(language);
+        }
+        return userRepo.findById(userId)
+                .map(User::getUsername)
+                .filter(name -> !name.isBlank())
+                .orElseGet(() -> messages.unknownSender(language));
     }
     
     /**
      * Envoie une notification broadcast à TOUS les utilisateurs
      * Utilisé par l'admin pour les annonces, forfaits, etc.
+     *
+     * <p>Seule notification qui echappe a la traduction, et c'est structurel:
+     * son texte est saisi librement par un administrateur, il n'existe donc
+     * aucun libelle a traduire. L'envoi push passe d'ailleurs par le topic
+     * {@code all_users} — un message unique pour tout le parc, qui ne peut par
+     * construction pas varier selon le destinataire. Traduire un broadcast
+     * supposerait de demander ses trois versions a l'administrateur.
      */
     public void sendBroadcastToAllUsers(String title, String message) {
         // 1. Créer une notification pour chaque user en DB

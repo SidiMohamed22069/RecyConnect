@@ -320,6 +320,7 @@ class UserTest {
                 null,                  // negotiationsSent
                 null,                  // negotiationsReceived
                 null,                  // fcmToken
+                "ar",                  // preferredLanguage
                 createdAt              // createdAt
         );
 
@@ -329,6 +330,7 @@ class UserTest {
         assertEquals("imagedata", fullUser.getImageData());
         assertEquals("password", fullUser.getPassword());
         assertEquals(Role.USER, fullUser.getRole());
+        assertEquals("ar", fullUser.getPreferredLanguage());
         assertEquals(createdAt, fullUser.getCreatedAt());
     }
 
@@ -339,7 +341,7 @@ class UserTest {
         User fresh = User.builder().username("fresh").build();
         assertNull(fresh.getCreatedAt());
 
-        fresh.stampCreatedAt();
+        fresh.applyDefaults();
 
         assertNotNull(fresh.getCreatedAt(),
                 "un compte doit porter sa date d'ouverture des l'insertion");
@@ -350,10 +352,32 @@ class UserTest {
         OffsetDateTime original = OffsetDateTime.parse("2026-01-15T08:30:00Z");
         User imported = User.builder().username("imported").createdAt(original).build();
 
-        imported.stampCreatedAt();
+        imported.applyDefaults();
 
         assertEquals(original, imported.getCreatedAt(),
                 "une date deja connue ne doit pas etre ecrasee");
+    }
+
+    // ==================== Tests pour preferredLanguage ====================
+
+    @Test
+    void testPreferredLanguageDefaultsToFrenchOnFirstPersist() {
+        User fresh = User.builder().username("fresh").build();
+        assertNull(fresh.getPreferredLanguage());
+
+        fresh.applyDefaults();
+
+        assertEquals("fr", fresh.getPreferredLanguage(),
+                "un compte sans preference doit recevoir ses notifications en francais");
+    }
+
+    @Test
+    void testPreferredLanguageIsNotOverwritten() {
+        User arabophone = User.builder().username("arabophone").preferredLanguage("ar").build();
+
+        arabophone.applyDefaults();
+
+        assertEquals("ar", arabophone.getPreferredLanguage());
     }
 
     // ==================== Tests pour equals et hashCode (Lombok @Data) ====================
