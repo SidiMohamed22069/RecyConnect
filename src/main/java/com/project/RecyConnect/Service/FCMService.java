@@ -14,6 +14,7 @@ import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 
 import com.project.RecyConnect.DTO.NotificationDTO;
+import com.project.RecyConnect.Model.SupportedLanguage;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Model.UserSession;
 import com.project.RecyConnect.Repository.UserRepo;
@@ -80,6 +81,8 @@ private final UserSessionRepository userSessionRepository;
 
 private final ResourceLoader resourceLoader;
 
+private final NotificationMessages notificationMessages;
+
 // ============================================================
 // CONSTRUCTEUR
 // ============================================================
@@ -87,11 +90,13 @@ private final ResourceLoader resourceLoader;
 public FCMService(
         UserRepo userRepo,
         UserSessionRepository userSessionRepository,
-        ResourceLoader resourceLoader) {
+        ResourceLoader resourceLoader,
+        NotificationMessages notificationMessages) {
 
     this.userRepo = userRepo;
     this.userSessionRepository = userSessionRepository;
     this.resourceLoader = resourceLoader;
+    this.notificationMessages = notificationMessages;
 }
 
 // ============================================================
@@ -187,6 +192,12 @@ private void initializeFirebaseApp(FirebaseOptions options) {
 
 /**
  * Envoie une notification push à l'appareil actif de l'utilisateur.
+ *
+ * <p>Le titre et le corps arrivent deja rediges dans la langue de
+ * {@code userId}: {@code NotificationService} les resout avant d'ecrire la
+ * ligne en base, et transmet ici le meme texte. Les traduire une seconde
+ * fois a cet endroit ferait diverger la notification poussee de celle que
+ * l'utilisateur retrouvera dans sa boite.
  */
 public void sendPushNotification(
         Long userId,
@@ -539,6 +550,11 @@ public void sendForceLogoutToToken(
 /**
  * Teste la connexion FCM et envoie une notification visible
  * à un utilisateur.
+ *
+ * <p>Seule notification dont ce service redige lui-meme le texte: elle est
+ * donc traduite ici, dans la langue du compte teste. Un test rendu en
+ * francais a un utilisateur arabophone ne prouverait qu'a moitie que la
+ * chaine fonctionne pour lui.
  */
 public String testFcmConnection(Long userId) {
 
@@ -596,12 +612,15 @@ public String testFcmConnection(Long userId) {
 
     try {
 
-        final String title =
-                "🧪 Test FCM RecyConnect";
+        NotificationMessages.Text text =
+                notificationMessages.textFor(
+                        "TEST",
+                        SupportedLanguage.of(user)
+                );
 
-        final String body =
-                "Si vous voyez cette notification, "
-                        + "FCM fonctionne correctement !";
+        final String title = "🧪 " + text.title();
+
+        final String body = text.body();
 
         Message message =
                 Message.builder()

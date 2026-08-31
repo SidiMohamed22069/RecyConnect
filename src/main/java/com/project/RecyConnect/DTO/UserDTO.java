@@ -22,6 +22,20 @@ public class UserDTO {
     private OffsetDateTime createdAt;
 
     /**
+     * Langue des notifications ("fr", "ar", "en"), en lecture seule.
+     *
+     * <p>Toujours renseignee, meme pour un compte anterieur a la colonne: le
+     * service normalise en francais a la lecture, de sorte que le mobile n'ait
+     * jamais a interpreter une absence.
+     *
+     * <p>Ce champ n'est pas ecrit par {@code PUT/PATCH /api/users/{id}}. Le
+     * seul chemin d'ecriture est {@code PUT /api/users/me/language}, qui ne
+     * peut agir que sur le compte appelant — un utilisateur n'a aucune raison
+     * de choisir la langue d'un autre.
+     */
+    private String preferredLanguage;
+
+    /**
      * Mot de passe en clair, uniquement a l'entree.
      *
      * <p>Sert a la creation d'un compte depuis le panneau d'administration
