@@ -92,6 +92,9 @@ connue.
 | `CATEGORY_SEED_ENABLED` | non | `true` | Crée le catalogue des catégories au démarrage (voir *Données d'amorçage*) |
 | `ADMIN_SEED_ENABLED` / `ADMIN_SEED_PASSWORD` | non | `true` / — | Compte administrateur d'amorçage. Désactivé en prod |
 | `DEMO_SEED_ENABLED` / `DEMO_SEED_PASSWORD` | non | `false` / — | Jeu de démonstration : 3 comptes, 10 annonces |
+| `APP_VERSION_MINIMUM` | non | — (vide) | Version mobile minimale supportée. En deçà, l'application affiche un écran de mise à jour **bloquant**. Vide = aucun blocage |
+| `APP_VERSION_LATEST` | non | — (vide) | Dernière version publiée. Au-dessus, l'application propose une mise à jour facultative |
+| `APP_VERSION_ANDROID_URL` / `APP_VERSION_IOS_URL` | non | fiche Play / — | Liens ouverts par le bouton « Mettre à jour ». `https` obligatoire |
 
 Fichiers **jamais versionnés** : `application.properties`, `.env`,
 `service-account-key.json`, `uploads/`.
@@ -137,13 +140,68 @@ d'un compte ne sont créées que s'il n'en possède aucune.
 
 ---
 
+## Mise à jour de l'application mobile
+
+`GET /api/app/version` publie la politique de version que l'application lit à
+chaque démarrage (voir `lib/core/version/` côté mobile) :
+
+```json
+{
+  "latestVersion": "1.3.0",
+  "minimumVersion": "1.2.0",
+  "androidUrl": "https://play.google.com/store/apps/details?id=com.recyconnect.app.neyan",
+  "iosUrl": "https://apps.apple.com/app/id123456789"
+}
+```
+
+| Situation | Effet côté mobile |
+|---|---|
+| `installée < minimumVersion` | Écran **bloquant**, sans bouton « Plus tard » |
+| `minimumVersion ≤ installée < latestVersion` | Proposition **facultative**, refusable |
+| `installée ≥ latestVersion` | Rien |
+| Endpoint injoignable, illisible ou non configuré | Rien — l'application démarre normalement |
+
+Endpoint **public** : la version qui ne sait plus s'authentifier est justement
+celle qui doit apprendre qu'elle est périmée. Réponse mise en cache 5 minutes.
+
+### Publier une mise à jour obligatoire
+
+1. Publier le build sur le magasin et attendre qu'il soit **réellement
+   disponible en téléchargement** ;
+2. renseigner `.env` puis redémarrer l'API :
+
+   ```bash
+   APP_VERSION_LATEST=1.3.0
+   APP_VERSION_MINIMUM=1.3.0
+   ```
+
+Les deux valeurs sont **vides par défaut**, et c'est délibéré : ce sont les
+seules lignes de configuration capables de rendre l'application inutilisable
+pour tout le parc installé. Bloquer un parc doit être un acte d'exploitation
+explicite, pas l'effet de bord d'un déploiement.
+
+`AppVersionService` pose trois garde-fous, vérifiés par
+`AppVersionServiceTest` :
+
+- une version illisible (`1.2..0`) est **omise** de la réponse, avec un
+  avertissement au journal, plutôt que transmise telle quelle ;
+- un `minimum` supérieur à `latest` est **ramené à `latest`** : exiger une
+  version absente du magasin enfermerait l'utilisateur devant un bouton sans
+  effet ;
+- une URL de magasin qui n'est pas en `https` absolu est **omise** : c'est un
+  lien qu'un écran bloquant ouvre hors de l'application, sur simple appui.
+
+Le journal de démarrage indique toujours la politique effectivement servie.
+
+---
+
 ## Tests
 
 ```bash
 ./mvnw test
 ```
 
-**239 tests.** Ils utilisent une base H2 en mémoire (`src/test/resources/application.properties`),
+**332 tests.** Ils utilisent une base H2 en mémoire (`src/test/resources/application.properties`),
 donc **aucune installation de PostgreSQL n'est nécessaire** — utile en intégration continue.
 Le test `contextLoads` démarre le contexte Spring complet et valide le câblage de la
 configuration de sécurité.
@@ -287,6 +345,7 @@ passe. Aucune liste de révocation à maintenir.
 | `GET /api/products` · `/{id}` · `/search` | Catalogue des produits |
 | `GET /api/products/category/{id}` · `/user/{id}` | Produits par catégorie ou vendeur |
 | `GET /api/files/{filename}` | Téléchargement d'un fichier |
+| `GET /api/app/version` | Politique de version de l'application mobile (`latestVersion`, `minimumVersion`, `androidUrl`, `iosUrl`) |
 | `/ws/**` | Poignée de main WebSocket (le CONNECT STOMP exige un JWT) |
 
 ### 🔐 Authentifié
