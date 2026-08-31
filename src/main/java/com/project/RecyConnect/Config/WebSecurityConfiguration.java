@@ -53,6 +53,16 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/legal", "/legal/", "/legal/**")
                         .permitAll()
 
+                        // Politique de version de l'application mobile.
+                        // Interrogee au demarrage, avant toute connexion: une
+                        // version devenue incompatible avec le contrat de l'API
+                        // est justement celle qui ne sait plus s'authentifier,
+                        // et qui doit malgre tout apprendre qu'elle doit se
+                        // mettre a jour. La reponse ne contient que des donnees
+                        // publiques (numeros de version, fiches de magasin).
+                        .requestMatchers(HttpMethod.GET, "/api/app/version")
+                        .permitAll()
+
                         // --- Lecture publique: uniquement le catalogue ---
                         // Volontairement retires de cette liste:
                         //  - /api/notifications/**  : boites de reception privees
