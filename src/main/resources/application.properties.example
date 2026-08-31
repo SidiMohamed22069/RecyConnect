@@ -82,3 +82,24 @@ sms.chinguisoft.lang=fr
 # Laisser vide desactive proprement les notifications push.
 fcm.service-account-key=${FCM_SERVICE_ACCOUNT_KEY:service-account-key.json}
 fcm.project-id=${FCM_PROJECT_ID:}
+
+# --- Politique de version de l'application mobile ---
+# Servie par GET /api/app/version, lue par le mobile a chaque demarrage.
+#   app.version.minimum : en deca, l'application affiche un ecran bloquant dont
+#                         on ne sort qu'en mettant a jour.
+#   app.version.latest  : au-dessus, une mise a jour facultative est proposee.
+#
+# Vides par defaut, et c'est deliberé: ces deux lignes sont les seules de toute
+# la configuration capables de rendre l'application inutilisable pour tout le
+# parc installe. Bloquer un parc doit etre un acte explicite d'exploitation, pas
+# l'effet de bord d'un deploiement. Tant qu'elles sont vides, le mobile ne
+# verifie rien et se comporte comme avant.
+#
+# Ne jamais renseigner un minimum superieur a ce qui est REELLEMENT publie sur
+# le magasin: l'utilisateur serait enferme devant un bouton sans effet. Le
+# service ramene d'office un minimum trop haut a app.version.latest et omet
+# toute valeur illisible plutot que de la transmettre (voir AppVersionService).
+app.version.latest=${APP_VERSION_LATEST:}
+app.version.minimum=${APP_VERSION_MINIMUM:}
+app.version.android-url=${APP_VERSION_ANDROID_URL:https://play.google.com/store/apps/details?id=com.recyconnect.app.neyan}
+app.version.ios-url=${APP_VERSION_IOS_URL:}

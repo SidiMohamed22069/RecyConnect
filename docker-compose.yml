@@ -72,6 +72,14 @@ services:
       # jamais embarquee dans l'image. Le prefixe "file:" est obligatoire.
       FCM_SERVICE_ACCOUNT_KEY: file:/app/secrets/service-account-key.json
       FCM_PROJECT_ID: ${FCM_PROJECT_ID:-recyconnect-24ffd}
+      # Politique de version de l'application mobile (voir
+      # Service/AppVersionService.java). APP_VERSION_MINIMUM bloque les
+      # installations plus anciennes derriere un ecran de mise a jour: ne jamais
+      # y placer une version absente du magasin.
+      APP_VERSION_LATEST: ${APP_VERSION_LATEST:-}
+      APP_VERSION_MINIMUM: ${APP_VERSION_MINIMUM:-}
+      APP_VERSION_ANDROID_URL: ${APP_VERSION_ANDROID_URL:-https://play.google.com/store/apps/details?id=com.recyconnect.app.neyan}
+      APP_VERSION_IOS_URL: ${APP_VERSION_IOS_URL:-}
     volumes:
       - uploads_data:/app/uploads
       # Cle de service Firebase, en lecture seule. Placer le fichier a cet emplacement
