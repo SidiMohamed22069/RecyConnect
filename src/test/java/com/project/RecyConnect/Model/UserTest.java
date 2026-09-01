@@ -320,6 +320,9 @@ class UserTest {
                 null,                  // negotiationsSent
                 null,                  // negotiationsReceived
                 null,                  // fcmToken
+                null,                  // notifyOffers
+                null,                  // notifySystem
+                null,                  // notifyPromotions
                 createdAt              // createdAt
         );
 

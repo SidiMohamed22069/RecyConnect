@@ -2,6 +2,8 @@ package com.project.RecyConnect.Controller;
 
 import com.project.RecyConnect.DTO.EarningsDTO;
 import com.project.RecyConnect.DTO.NegotiationDTO;
+import com.project.RecyConnect.DTO.NegotiationHistoryDTO;
+import com.project.RecyConnect.DTO.TransactionDTO;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Service.ModerationService;
 import com.project.RecyConnect.Service.NegotiationService;
@@ -243,6 +245,68 @@ public class NegotiationController {
             case NOT_ACCEPTED -> ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", "Contact is available once the offer is accepted"));
         };
+    }
+
+    /**
+     * La contre-proposition du vendeur.
+     *
+     * <p>Troisieme reponse possible a une offre, a cote d'accepter et de
+     * refuser — et la plus frequente dans une negociation reelle. Le corps
+     * porte {@code price} et/ou {@code quantity}.
+     */
+    @PostMapping("/{id}/counter")
+    public ResponseEntity<?> counterOffer(@PathVariable Long id,
+                                          @RequestBody NegotiationDTO dto) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            return ResponseEntity.ok(service.counterBySeller(
+                    id, currentUser.getId(), dto.getPrice(), dto.getQuantity()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    /**
+     * Le fil d'une negociation: "25 -> 20 -> 22".
+     *
+     * <p>Reserve aux deux parties. Les montants successifs d'une negociation
+     * sont une information commerciale, au meme titre que l'offre elle-meme.
+     */
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<NegotiationHistoryDTO>> history(@PathVariable Long id) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        NegotiationDTO existing = service.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        boolean isParty = currentUser.getId().equals(existing.getSenderId())
+                || currentUser.getId().equals(existing.getReceiverId());
+        if (!isParty) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(service.historyOf(id));
+    }
+
+    /**
+     * Le journal des transactions conclues de l'appelant, ventes et achats.
+     *
+     * <p>Le total etait deja servi par {@code /earnings/me}; il manquait le
+     * detail qui en fait un outil de gestion pour un collecteur professionnel.
+     */
+    @GetMapping("/history/me")
+    public ResponseEntity<List<TransactionDTO>> myTransactions() {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(service.transactionsFor(currentUser.getId()));
     }
 
     @GetMapping("/earnings/me")
