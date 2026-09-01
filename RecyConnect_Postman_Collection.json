@@ -1,793 +1,1944 @@
 {
-	"info": {
-		"_postman_id": "recyconnect-api-collection",
-		"name": "RecyConnect API - Single Device Policy",
-		"description": "Collection mise à jour pour la nouvelle politique: 1 compte = 1 téléphone actif. deviceId + fcmToken obligatoires.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:8081",
-			"type": "string"
-		},
-		{
-			"key": "token",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "deviceId",
-			"value": "550e8400-e29b-41d4-a716-446655440000",
-			"type": "string"
-		},
-		{
-			"key": "fcmToken",
-			"value": "cJI8v5vZsyE:APA91bE_test_token_123456",
-			"type": "string"
-		},
-		{
-			"key": "userId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "negotiationId",
-			"value": "1",
-			"type": "string"
-		}
-	],
-	"item": [
-		{
-			"name": "🔐 Auth - Single Device Policy",
-			"description": "⚠️ IMPORTANT: Tous les endpoints nécessitent deviceId + fcmToken. 1 compte = 1 appareil actif.",
-			"item": [
-				{
-					"name": "1. Send Verification Code",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"phone\": \"78123456\",\n    \"isForgetPassword\": false\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/send-code",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "send-code"]
-						}
-					}
-				},
-				{
-					"name": "2. Verify Code",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"phone\": \"78123456\",\n    \"code\": \"123456\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/verify-code",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "verify-code"]
-						}
-					}
-				},
-				{
-					"name": "3. Register (avec deviceId + fcmToken)",
-					"event": [
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"// Generate random deviceId (UUID format)",
-									"pm.variables.set('deviceId', 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8); return v.toString(16); }));",
-									"",
-									"// Generate fake FCM token",
-									"pm.variables.set('fcmToken', 'cJI8v5vZsyE:APA91bE_' + Math.random().toString(36).substring(2, 25));"
-								]
-							}
-						},
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 201) {",
-									"  const response = pm.response.json();",
-									"  pm.variables.set('token', response.token);",
-									"  pm.variables.set('userId', response.userId);",
-									"  pm.test('✅ Register successful - Token saved', () => {",
-									"    pm.expect(response.message).to.exist;",
-									"  });",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"Test@1234\",\n    \"phone\": \"78123456\",\n    \"verificationCode\": \"123456\",\n    \"deviceId\": \"{{deviceId}}\",\n    \"fcmToken\": \"{{fcmToken}}\",\n    \"deviceName\": \"iPhone de Test\",\n    \"deviceType\": \"IOS\",\n    \"role\": \"USER\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/register",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "register"]
-						}
-					}
-				},
-				{
-					"name": "4. Login (avec deviceId + fcmToken)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"  const response = pm.response.json();",
-									"  pm.variables.set('token', response.token);",
-									"  pm.test('✅ Login successful - sessionVersion incremented', () => {",
-									"    pm.expect(response.message).to.include('Login');",
-									"  });",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"phone\": \"78123456\",\n    \"password\": \"Test@1234\",\n    \"deviceId\": \"{{deviceId}}\",\n    \"fcmToken\": \"{{fcmToken}}\",\n    \"deviceName\": \"iPhone de Test\",\n    \"deviceType\": \"IOS\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "login"]
-						},
-						"description": "⚠️ Login from different deviceId = old device revoked"
-					}
-				},
-				{
-					"name": "5. Get Current User (Protected)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/me",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "me"]
-						},
-						"description": "⚠️ Requires: Bearer token + X-Device-Id header"
-					}
-				},
-				{
-					"name": "6. Logout",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": ["pm.variables.set('token', '');"]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/logout",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "logout"]
-						}
-					}
-				},
-				{
-					"name": "7. Reset Password",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"phone\": \"78123456\",\n    \"verificationCode\": \"123456\",\n    \"password\": \"12345678\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/reset-password",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "reset-password"]
-						}
-					}
-				},
-				{
-					"name": "Register Admin (requires admin token)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"newadmin\",\n    \"password\": \"admin123\",\n    \"phone\": \"99999999\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/auth/register-admin",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "auth", "register-admin"]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "👤 Users",
-			"item": [
-				{
-					"name": "Get All Users",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users"]
-						}
-					}
-				},
-				{
-					"name": "Get User By ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1"]
-						}
-					}
-				},
-				{
-					"name": "Update User (PATCH)",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"username\": \"updated_username\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1"]
-						}
-					}
-				},
-				{
-					"name": "Update User Role (Admin only)",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"role\": \"ADMIN\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1/role",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1", "role"]
-						}
-					}
-				},
-				{
-					"name": "Get User By Phone",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/by-phone/78123456",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "by-phone", "78123456"]
-						}
-					}
-				},
-				{
-					"name": "Get User Stats",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/1/stats",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "1", "stats"]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📦 Products",
-			"item": [
-				{
-					"name": "Get All Products",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/products",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products"]
-						}
-					}
-				},
-				{
-					"name": "Get Product By ID",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/products/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1"]
-						}
-					}
-				},
-				{
-					"name": "Get Products By Category",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/products/category/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "category", "1"]
-						}
-					}
-				},
-				{
-					"name": "Search Products",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/products/search?query=plastique",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "search"],
-							"query": [{"key": "query", "value": "plastique"}]
-						}
-					}
-				},
-				{
-					"name": "Create Product",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"categoryId\": 1\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/products",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products"]
-						}
-					}
-				},
-				{
-					"name": "Update Product (PATCH)",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"price\": 22.50\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/products/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1"]
-						}
-					}
-				},
-				{
-					"name": "Delete Product",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/products/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "products", "1"]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "🤝 Negotiations",
-			"item": [
-				{
-					"name": "Get All Negotiations",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations"]
-						}
-					}
-				},
-				{
-					"name": "Get Negotiation By ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "1"]
-						}
-					}
-				},
-				{
-					"name": "Get Queue By Product",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/product/1/queue",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "product", "1", "queue"]
-						}
-					}
-				},
-				{
-					"name": "Create Offer",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 200 || pm.response.code === 201) {",
-									"  const jsonData = pm.response.json();",
-									"  if (jsonData.id) { pm.collectionVariables.set('negotiationId', jsonData.id); }",
-									"}"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"productId\": 1,\n    \"price\": 22.00,\n    \"quantity\": 50\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations"]
-						}
-					}
-				},
-				{
-					"name": "Update Offer (Buyer)",
-					"request": {
-						"method": "PUT",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"price\": 23.50,\n    \"quantity\": 45\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "{{negotiationId}}"]
-						}
-					}
-				},
-				{
-					"name": "Cancel Offer (Buyer)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/cancel",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "{{negotiationId}}", "cancel"]
-						}
-					}
-				},
-				{
-					"name": "Accept Offer (Seller)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/accept",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "{{negotiationId}}", "accept"]
-						}
-					}
-				},
-				{
-					"name": "Reject Offer (Seller)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/reject",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "{{negotiationId}}", "reject"]
-						}
-					}
-				},
-				{
-					"name": "Get My Earnings",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/negotiations/earnings/me",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "negotiations", "earnings", "me"]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📬 Notifications",
-			"item": [
-				{
-					"name": "Get All Notifications",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications"]
-						}
-					}
-				},
-				{
-					"name": "Get Unread Notifications",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/receiver/1/unread",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "receiver", "1", "unread"]
-						}
-					}
-				},
-				{
-					"name": "Mark Notification as Read",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/notifications/1/read",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "notifications", "1", "read"]
-						}
-					}
-				},
-				{
-					"name": "Send Broadcast (Admin only)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"title\": \"Notification importante\",\n    \"message\": \"Message pour tous les utilisateurs\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/admin/notifications/broadcast",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "admin", "notifications", "broadcast"]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "📞 Phone Verification",
-			"item": [
-				{
-					"name": "Get All Verification Codes",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications"]
-						}
-					}
-				},
-				{
-					"name": "Get Verification By ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "1"]
-						}
-					}
-				},
-				{
-					"name": "Get Verification By User ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{token}}"},
-							{"key": "X-Device-Id", "value": "{{deviceId}}"}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/user/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "user", "1"]
-						}
-					}
-				},
-				{
-					"name": "Verify Phone (GET)",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/phone-verifications/verify?phone=78123456&code=123456",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "phone-verifications", "verify"],
-							"query": [
-								{"key": "phone", "value": "78123456"},
-								{"key": "code", "value": "123456"}
-							]
-						}
-					}
-				}
-			]
-		},
-		{
-			"name": "🔥 FCM Testing",
-			"description": "Tester les notifications push Firebase Cloud Messaging",
-			"item": [
-				{
-					"name": "FCM Status",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/fcm-test/status",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "fcm-test", "status"]
-						}
-					}
-				},
-				{
-					"name": "List Users with FCM Status",
-					"request": {
-						"method": "GET",
-						"url": {
-							"raw": "{{baseUrl}}/api/fcm-test/users",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "fcm-test", "users"]
-						}
-					}
-				},
-				{
-					"name": "Send Test Notification to User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Content-Type", "value": "application/json"}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"title\": \"🔔 Test\",\n    \"message\": \"Notification de test\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/fcm-test/send/1",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "fcm-test", "send", "1"]
-						}
-					}
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "recyconnect-api-collection",
+    "name": "RecyConnect API - Single Device Policy",
+    "description": "Collection mise à jour pour la nouvelle politique: 1 compte = 1 téléphone actif. deviceId + fcmToken obligatoires.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deviceId",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    },
+    {
+      "key": "fcmToken",
+      "value": "cJI8v5vZsyE:APA91bE_test_token_123456",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "negotiationId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "alertId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth - Single Device Policy",
+      "description": "⚠️ IMPORTANT: Tous les endpoints nécessitent deviceId + fcmToken. 1 compte = 1 appareil actif.",
+      "item": [
+        {
+          "name": "1. Send Verification Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"78123456\",\n    \"isForgetPassword\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/send-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "send-code"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Verify Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"78123456\",\n    \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-code"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Register (avec deviceId + fcmToken)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate random deviceId (UUID format)",
+                  "pm.variables.set('deviceId', 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8); return v.toString(16); }));",
+                  "",
+                  "// Generate fake FCM token",
+                  "pm.variables.set('fcmToken', 'cJI8v5vZsyE:APA91bE_' + Math.random().toString(36).substring(2, 25));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const response = pm.response.json();",
+                  "  pm.variables.set('token', response.token);",
+                  "  pm.variables.set('userId', response.userId);",
+                  "  pm.test('✅ Register successful - Token saved', () => {",
+                  "    pm.expect(response.message).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"Test@1234\",\n    \"phone\": \"78123456\",\n    \"verificationCode\": \"123456\",\n    \"deviceId\": \"{{deviceId}}\",\n    \"fcmToken\": \"{{fcmToken}}\",\n    \"deviceName\": \"iPhone de Test\",\n    \"deviceType\": \"IOS\",\n    \"role\": \"USER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Login (avec deviceId + fcmToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const response = pm.response.json();",
+                  "  pm.variables.set('token', response.token);",
+                  "  pm.test('✅ Login successful - sessionVersion incremented', () => {",
+                  "    pm.expect(response.message).to.include('Login');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"78123456\",\n    \"password\": \"Test@1234\",\n    \"deviceId\": \"{{deviceId}}\",\n    \"fcmToken\": \"{{fcmToken}}\",\n    \"deviceName\": \"iPhone de Test\",\n    \"deviceType\": \"IOS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "⚠️ Login from different deviceId = old device revoked"
+          }
+        },
+        {
+          "name": "5. Get Current User (Protected)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "⚠️ Requires: Bearer token + X-Device-Id header"
+          }
+        },
+        {
+          "name": "6. Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.variables.set('token', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"78123456\",\n    \"verificationCode\": \"123456\",\n    \"password\": \"12345678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "reset-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Admin (requires admin token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"newadmin\",\n    \"password\": \"admin123\",\n    \"phone\": \"99999999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register-admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register-admin"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update User (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"updated_username\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update User Role (Admin only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/1/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "1",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User By Phone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/by-phone/78123456",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "by-phone",
+                "78123456"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/1/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "1",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/public",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{userId}}",
+                "public"
+              ]
+            },
+            "description": "Ni numero, ni role : c'est ce qui permet de repondre a « a qui ai-je affaire ? » sans rouvrir /api/users/{id}."
+          }
+        },
+        {
+          "name": "Notification preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/notification-preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "notification-preferences"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update notification preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offers\": true,\n  \"system\": true,\n  \"promotions\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/notification-preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "notification-preferences"
+              ]
+            },
+            "description": "Couper un interrupteur fait taire le telephone : la notification reste lisible dans la boite de reception."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Product By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Products By Category",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products/category/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "category",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products/search?query=plastique",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "plastique"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"categoryId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Product (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"price\": 22.50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Products (filtres, tri, pagination)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products/search?query=cuivre&categoryId=1&minPrice=10&maxPrice=500&minQuantity=20&unit=KG&location=arafat&sort=recent&page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "cuivre"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1"
+                },
+                {
+                  "key": "minPrice",
+                  "value": "10"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "500"
+                },
+                {
+                  "key": "minQuantity",
+                  "value": "20"
+                },
+                {
+                  "key": "unit",
+                  "value": "KG"
+                },
+                {
+                  "key": "location",
+                  "value": "arafat"
+                },
+                {
+                  "key": "sort",
+                  "value": "recent"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Tri : recent (defaut), price_asc, price_desc, quantity_desc, oldest. Sans `size`, le catalogue part entier. Signee quand une session existe : le serveur marque alors les favoris et ecarte les comptes bloques."
+          }
+        },
+        {
+          "name": "Similar Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/similar?limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}",
+                "similar"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "D'autres annonces de la meme categorie, hors celle qu'on regarde."
+          }
+        },
+        {
+          "name": "Product Locations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products/locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "locations"
+              ]
+            },
+            "description": "Les codes de moughataa acceptes par `location`."
+          }
+        },
+        {
+          "name": "Update Product Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"paused\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}",
+                "status"
+              ]
+            },
+            "description": "available | paused | recycled. Reserve au proprietaire ou a un administrateur."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🤝 Negotiations",
+      "item": [
+        {
+          "name": "Get All Negotiations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Negotiation By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Queue By Product",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/product/1/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "product",
+                "1",
+                "queue"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Offer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const jsonData = pm.response.json();",
+                  "  if (jsonData.id) { pm.collectionVariables.set('negotiationId', jsonData.id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"productId\": 1,\n    \"price\": 22.00,\n    \"quantity\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Offer (Buyer)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"price\": 23.50,\n    \"quantity\": 45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "{{negotiationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Offer (Buyer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "{{negotiationId}}",
+                "cancel"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Accept Offer (Seller)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "{{negotiationId}}",
+                "accept"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Offer (Seller)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "{{negotiationId}}",
+                "reject"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Earnings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/earnings/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "earnings",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Counter Offer (vendeur)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 22.0,\n  \"quantity\": 45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/counter",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "{{negotiationId}}",
+                "counter"
+              ]
+            },
+            "description": "La troisieme reponse, a cote d'accepter et de refuser. L'offre reste en attente et repasse a l'acheteur."
+          }
+        },
+        {
+          "name": "Negotiation History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/{{negotiationId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "{{negotiationId}}",
+                "history"
+              ]
+            },
+            "description": "Le fil des montants successifs. Reserve aux deux parties."
+          }
+        },
+        {
+          "name": "My Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/history/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "history",
+                "me"
+              ]
+            },
+            "description": "Le journal des transactions conclues, ventes et achats."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📬 Notifications",
+      "item": [
+        {
+          "name": "Get All Notifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/receiver/1/unread",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "receiver",
+                "1",
+                "unread"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/1/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "1",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Broadcast (Admin only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Notification importante\",\n    \"message\": \"Message pour tous les utilisateurs\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/notifications/broadcast",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "notifications",
+                "broadcast"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📞 Phone Verification",
+      "item": [
+        {
+          "name": "Get All Verification Codes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/phone-verifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "phone-verifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Verification By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/phone-verifications/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "phone-verifications",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Verification By User ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/phone-verifications/user/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "phone-verifications",
+                "user",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Phone (GET)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/phone-verifications/verify?phone=78123456&code=123456",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "phone-verifications",
+                "verify"
+              ],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "78123456"
+                },
+                {
+                  "key": "code",
+                  "value": "123456"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔥 FCM Testing",
+      "description": "Tester les notifications push Firebase Cloud Messaging",
+      "item": [
+        {
+          "name": "FCM Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/fcm-test/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "fcm-test",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Users with FCM Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/fcm-test/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "fcm-test",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Test Notification to User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"🔔 Test\",\n    \"message\": \"Notification de test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/fcm-test/send/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "fcm-test",
+                "send",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⭐ Reviews",
+      "item": [
+        {
+          "name": "Reviews of a seller",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/user/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reviews",
+                "user",
+                "{{userId}}"
+              ]
+            },
+            "description": "Lecture publique : une note qui ne se verrait qu'une fois connecte ne rassurerait personne."
+          }
+        },
+        {
+          "name": "Review summary",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/user/{{userId}}/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reviews",
+                "user",
+                "{{userId}}",
+                "summary"
+              ]
+            },
+            "description": "Moyenne et nombre d'avis. La moyenne est nulle — et non zero — tant qu'aucun avis n'existe."
+          }
+        },
+        {
+          "name": "Pending reviews (me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/pending/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reviews",
+                "pending",
+                "me"
+              ]
+            },
+            "description": "Les offres acceptees que l'appelant peut encore noter."
+          }
+        },
+        {
+          "name": "Create review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"negotiationId\": 1,\n  \"rating\": 5,\n  \"comment\": \"Rendez-vous tenu\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reviews"
+              ]
+            },
+            "description": "Acheteur vers vendeur uniquement, une fois par transaction, et seulement sur une offre acceptee. 403 si l'appelant n'est pas l'acheteur, 409 si l'offre n'est pas acceptee ou deja notee, 400 si la note sort de l'echelle 1-5."
+          }
+        }
+      ]
+    },
+    {
+      "name": "❤️ Favorites",
+      "item": [
+        {
+          "name": "My favorites",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "favorites"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Is favorite",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "favorites",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add favorite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "favorites",
+                "{{productId}}"
+              ]
+            },
+            "description": "Idempotent : deux appuis n'ajoutent qu'une ligne."
+          }
+        },
+        {
+          "name": "Remove favorite",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/favorites/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "favorites",
+                "{{productId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Search Alerts",
+      "item": [
+        {
+          "name": "My alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/search-alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "search-alerts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create alert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"keyword\": \"cuivre\",\n  \"categoryId\": 3,\n  \"maxPrice\": 300,\n  \"minQuantity\": 20,\n  \"location\": \"ksar\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/search-alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "search-alerts"
+              ]
+            },
+            "description": "Tous les criteres sont facultatifs et se cumulent. Une veille sans critere previent de toute nouvelle annonce."
+          }
+        },
+        {
+          "name": "Update alert",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"keyword\": \"cuivre\",\n  \"categoryId\": null,\n  \"maxPrice\": 250,\n  \"minQuantity\": null,\n  \"location\": null,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/search-alerts/{{alertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "search-alerts",
+                "{{alertId}}"
+              ]
+            },
+            "description": "Le corps est envoye entier : un critere absent est efface."
+          }
+        },
+        {
+          "name": "Delete alert",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Device-Id",
+                "value": "{{deviceId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/search-alerts/{{alertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "search-alerts",
+                "{{alertId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
 }
