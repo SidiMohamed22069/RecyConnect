@@ -286,8 +286,21 @@ passe. Aucune liste de révocation à maintenir.
 | `GET /api/categories/**` | Catalogue des catégories, libellés `nameFr` / `nameAr` / `nameEn` inclus |
 | `GET /api/products` · `/{id}` · `/search` | Catalogue des produits |
 | `GET /api/products/category/{id}` · `/user/{id}` | Produits par catégorie ou vendeur |
+| `GET /api/products/{id}/similar` | Autres annonces de la même catégorie |
+| `GET /api/products/locations` | Codes de moughataa acceptés par `location` |
+| `GET /api/users/{id}/public` | Fiche vendeur — ni numéro, ni rôle |
+| `GET /api/reviews/user/{id}` · `/{id}/summary` | Avis reçus et note moyenne |
+| `GET /p/{id}` | Page web d'une annonce, balises OpenGraph pour le partage |
 | `GET /api/files/{filename}` | Téléchargement d'un fichier |
 | `/ws/**` | Poignée de main WebSocket (le CONNECT STOMP exige un JWT) |
+
+`GET /api/products/search` accepte `query`, `categoryId`, `excludeUserId`,
+`minPrice`, `maxPrice`, `minQuantity`, `unit`, `location`, `sort`, `page` et
+`size`. Le tri vaut `recent` (défaut), `price_asc`, `price_desc`,
+`quantity_desc` ou `oldest` ; sans `size`, le catalogue part entier. La
+requête reste servie sans jeton, mais **signée elle en dit plus** : le serveur
+écarte alors les annonces des comptes bloqués et marque celles que l'appelant a
+enregistrées en favori.
 
 ### 🔐 Authentifié
 
@@ -297,8 +310,16 @@ passe. Aucune liste de révocation à maintenir.
 | `POST /api/negotiations` | Faire une offre |
 | `POST /api/negotiations/{id}/accept` · `/reject` | Réservé au vendeur |
 | `POST /api/negotiations/{id}/cancel` | Réservé à l'acheteur |
+| `POST /api/negotiations/{id}/counter` | Contre-proposition, réservée au vendeur |
+| `GET /api/negotiations/{id}/history` | Fil des montants successifs, réservé aux parties |
 | `GET /api/negotiations/product/{id}/queue` | File des offres classée |
 | `GET /api/negotiations/earnings/me` | Revenus du vendeur connecté |
+| `GET /api/negotiations/history/me` | Journal des transactions conclues |
+| `PATCH /api/products/{id}/status` | `available` · `paused` · `recycled` |
+| `GET/POST/DELETE /api/favorites` · `/{productId}` | Annonces enregistrées |
+| `GET/POST/PUT/DELETE /api/search-alerts` | Veilles de recherche |
+| `POST /api/reviews` · `GET /api/reviews/pending/me` | Noter un vendeur |
+| `GET/PUT /api/users/me/notification-preferences` | Trois interrupteurs de notification |
 | `GET /api/notifications/**` | Ses notifications |
 | `GET /api/users/{id}` · `/{id}/stats` · `/by-phone/{phone}` | Profils |
 | `PUT/PATCH/DELETE /api/users/{id}` | Son propre compte uniquement |
@@ -316,6 +337,43 @@ passe. Aucune liste de révocation à maintenir.
 | `/api/fcm-test/**` | Diagnostic Firebase |
 
 Une collection Postman complète est fournie : `RecyConnect_Postman_Collection.json`.
+
+---
+
+### Ce que le serveur refuse, et par quel code
+
+Les refus sont distingués par leur code HTTP plutôt que par leur message :
+l'application mobile déconnecte l'utilisateur sur un 401/403 d'un appel signé,
+et confondre « pas encore autorisé » avec « session morte » le renverrait sur
+l'écran de connexion sans un mot d'explication.
+
+| Cas | Code |
+|---|---|
+| Lire le numéro d'une offre dont on n'est pas partie | `403` |
+| Lire le numéro d'une offre pas encore acceptée | `409` |
+| Noter une transaction sans en être l'acheteur | `403` |
+| Noter une offre non acceptée, ou déjà notée | `409` |
+| Note hors de l'échelle de 1 à 5 | `400` |
+| Contre-proposer sur une offre qui n'est plus en attente | `400` |
+| Veille de recherche appartenant à quelqu'un d'autre | `404` — répondre `403` confirmerait qu'elle existe |
+
+---
+
+### Partage et liens profonds
+
+`GET /p/{id}` sert une page web publique portant les balises OpenGraph : le
+titre, le prix et la photo apparaissent dans la conversation WhatsApp. Son
+bouton renvoie vers `recyconnect://product/{id}`, que l'application mobile
+intercepte.
+
+Pour que le lien `https://…/p/{id}` ouvre directement l'application, il reste à
+déposer deux fichiers signés par l'empreinte du certificat de publication :
+
+* `src/main/resources/static/.well-known/assetlinks.json` (Android) ;
+* `src/main/resources/static/.well-known/apple-app-site-association` (iOS).
+
+Sans eux, Android propose le choix entre le navigateur et l'application, et le
+bouton de la page assure le même service.
 
 ---
 
