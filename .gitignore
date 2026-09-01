@@ -50,3 +50,4 @@ uploads/
 
 API_USER_ACCESS.md
 CODE_REVIEW.md
+src/main/resources/*.json

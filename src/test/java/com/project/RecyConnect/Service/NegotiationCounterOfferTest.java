@@ -160,11 +160,15 @@ class NegotiationCounterOfferTest {
 
         service.counterBySeller(100L, 2L, 22.0, null);
 
-        verify(notificationService).sendNegotiationNotification(
+        // Le texte n'est plus compose ici : le service le redige dans la langue
+        // du destinataire a partir de la cle OFFER_COUNTERED.
+        verify(notificationService).sendLocalizedNotification(
                 org.mockito.ArgumentMatchers.eq(1L),
                 org.mockito.ArgumentMatchers.eq(2L),
                 org.mockito.ArgumentMatchers.eq(100L),
                 org.mockito.ArgumentMatchers.eq("OFFER_COUNTERED"),
-                any(), any());
+                org.mockito.ArgumentMatchers.eq("Fatima"),
+                org.mockito.ArgumentMatchers.eq(22.0),
+                org.mockito.ArgumentMatchers.eq("Cartons"));
     }
 }

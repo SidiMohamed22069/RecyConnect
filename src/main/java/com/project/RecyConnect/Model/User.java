@@ -67,6 +67,23 @@ public class User implements UserDetails {
     private Boolean notifyPromotions;
 
     /**
+     * Langue dans laquelle ce compte recoit ses notifications ("fr", "ar", "en").
+     *
+     * <p>La colonne porte son defaut cote base plutot que cote Java: un
+     * {@code ALTER TABLE ... ADD COLUMN ... DEFAULT 'fr'} remplit les lignes
+     * existantes en une passe, sans reecriture de table sur PostgreSQL et donc
+     * sans interruption. Les comptes anterieurs se retrouvent en francais,
+     * c'est-a-dire exactement dans la langue qu'ils recevaient avant.
+     *
+     * <p>Reste malgre tout traite comme potentiellement nul a la lecture — une
+     * base restauree depuis un dump anterieur, ou un enregistrement construit
+     * hors JPA, ne doit pas faire echouer l'envoi. Voir
+     * {@link SupportedLanguage#of(User)}.
+     */
+    @Column(columnDefinition = "varchar(8) default 'fr'")
+    private String preferredLanguage;
+
+    /**
      * Date d'ouverture du compte.
      *
      * <p>Le panneau d'administration affiche une colonne "inscrit le" et calcule
@@ -77,11 +94,21 @@ public class User implements UserDetails {
     @Column(updatable = false)
     private OffsetDateTime createdAt;
 
-    /** Horodate une insertion, sans dependre de l'appelant pour y penser. */
+    /**
+     * Complete a l'insertion ce que l'appelant n'a pas eu a renseigner.
+     *
+     * <p>La langue est fixee ici plutot qu'a la declaration du champ: un
+     * initialiseur Java serait perdu par le constructeur du builder Lombok,
+     * et laisser la base seule s'en charger rendrait l'objet en memoire
+     * different de la ligne ecrite jusqu'au prochain rechargement.
+     */
     @PrePersist
-    void stampCreatedAt() {
+    void applyDefaults() {
         if (createdAt == null) {
             createdAt = OffsetDateTime.now();
+        }
+        if (preferredLanguage == null || preferredLanguage.isBlank()) {
+            preferredLanguage = SupportedLanguage.DEFAULT.getCode();
         }
     }
 
