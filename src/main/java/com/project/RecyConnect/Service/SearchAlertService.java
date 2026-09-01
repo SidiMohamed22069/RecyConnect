@@ -133,13 +133,12 @@ public class SearchAlertService {
                 continue;
             }
             try {
-                notificationService.sendNegotiationNotification(
+                notificationService.sendLocalizedNotification(
                         watcherId,
                         ownerId,
                         product.getId(),
                         "SEARCH_ALERT",
-                        "Nouvelle annonce pour votre veille",
-                        product.getTitle() + " vient d'etre publie"
+                        product.getTitle()
                 );
             } catch (RuntimeException e) {
                 // Volontairement avale: une veille muette est un desagrement,

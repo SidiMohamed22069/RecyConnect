@@ -85,8 +85,8 @@ class SearchAlertServiceTest {
     }
 
     private void verifyNotified(int fois) {
-        verify(notificationService, times(fois)).sendNegotiationNotification(
-                eq(1L), any(), any(), eq("SEARCH_ALERT"), any(), any());
+        verify(notificationService, times(fois)).sendLocalizedNotification(
+                eq(1L), any(), any(), eq("SEARCH_ALERT"), any());
     }
 
     @Test
@@ -142,8 +142,8 @@ class SearchAlertServiceTest {
 
         service.notifyMatching(annonce("Cuivre denude", 250.0, 40L, null, null));
 
-        verify(notificationService, never()).sendNegotiationNotification(
-                any(), any(), any(), any(), any(), any());
+        verify(notificationService, never()).sendLocalizedNotification(
+                any(), any(), any(), any(), any());
     }
 
     @Test
@@ -155,8 +155,8 @@ class SearchAlertServiceTest {
         service.notifyMatching(enPause);
 
         verify(repo, never()).findByActiveTrue();
-        verify(notificationService, never()).sendNegotiationNotification(
-                any(), any(), any(), any(), any(), any());
+        verify(notificationService, never()).sendLocalizedNotification(
+                any(), any(), any(), any(), any());
     }
 
     @Test
@@ -164,8 +164,8 @@ class SearchAlertServiceTest {
     void notificationFailureIsSwallowed() {
         when(repo.findByActiveTrue()).thenReturn(List.of(veille(null, null, null, null, null)));
         org.mockito.Mockito.doThrow(new RuntimeException("FCM indisponible"))
-                .when(notificationService).sendNegotiationNotification(
-                        any(), any(), any(), any(), any(), any());
+                .when(notificationService).sendLocalizedNotification(
+                        any(), any(), any(), any(), any());
 
         service.notifyMatching(annonce("Cuivre denude", 250.0, 40L, null, null));
     }

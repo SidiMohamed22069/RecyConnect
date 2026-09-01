@@ -169,7 +169,7 @@ public class NegotiationService {
                 saved.getReceiverId(),
                 saved.getSenderId(),
                 saved.getId(),
-                saved.getProductTitle() != null ? saved.getProductTitle() : "un produit"
+                saved.getProductTitle()
         );
 
         notifyOutbidUsers(savedEntity);
@@ -195,13 +195,13 @@ public class NegotiationService {
             Negotiation updated = repo.save(existing);
             recordHistory(updated, updated.getSender(), "UPDATED");
 
-            notificationService.sendNegotiationNotification(
+            notificationService.sendLocalizedNotification(
                     updated.getReceiver().getId(),
                     updated.getSender().getId(),
                     updated.getId(),
                     "OFFER_UPDATED",
-                    "Offre modifiee",
-                    updated.getSender().getUsername() + " a modifie une offre sur " + updated.getProduct().getTitle()
+                    updated.getSender().getUsername(),
+                    updated.getProduct().getTitle()
             );
 
             notifyOutbidUsers(updated);
@@ -237,7 +237,7 @@ public class NegotiationService {
                         updated.getSenderId(),
                         updated.getReceiverId(),
                         updated.getId(),
-                        updated.getProductTitle() != null ? updated.getProductTitle() : "un produit"
+                        updated.getProductTitle()
                 );
             }
 
@@ -260,13 +260,13 @@ public class NegotiationService {
         offer.setStatus(NegotiationStatus.STATUS_CANCELLED);
         Negotiation saved = repo.save(offer);
 
-        notificationService.sendNegotiationNotification(
+        notificationService.sendLocalizedNotification(
                 saved.getReceiver().getId(),
                 saved.getSender().getId(),
                 saved.getId(),
                 "OFFER_CANCELLED",
-                "Offre annulee",
-                saved.getSender().getUsername() + " a annule son offre sur " + saved.getProduct().getTitle()
+                saved.getSender().getUsername(),
+                saved.getProduct().getTitle()
         );
 
         notifyQueueUpdated(saved.getProduct().getId(), saved.getReceiver().getId(), saved.getSender().getId());
@@ -324,15 +324,14 @@ public class NegotiationService {
         Negotiation countered = repo.save(offer);
         recordHistory(countered, seller, "COUNTER_OFFER");
 
-        notificationService.sendNegotiationNotification(
+        notificationService.sendLocalizedNotification(
                 countered.getSender().getId(),
                 seller.getId(),
                 countered.getId(),
                 "OFFER_COUNTERED",
-                "Contre-proposition recue",
-                seller.getUsername() + " vous propose " + countered.getPrice()
-                        + " pour " + countered.getQuantity()
-                        + " sur " + countered.getProduct().getTitle()
+                seller.getUsername(),
+                countered.getPrice(),
+                countered.getProduct().getTitle()
         );
 
         return toDTO(countered);
@@ -432,13 +431,12 @@ public class NegotiationService {
         offer.setStatus(NegotiationStatus.STATUS_REJECTED);
         Negotiation saved = repo.save(offer);
 
-        notificationService.sendNegotiationNotification(
+        notificationService.sendLocalizedNotification(
                 saved.getSender().getId(),
                 saved.getReceiver().getId(),
                 saved.getId(),
                 "OFFER_REJECTED",
-                "Offre rejetee",
-                "Votre offre sur " + saved.getProduct().getTitle() + " a ete rejetee"
+                saved.getProduct().getTitle()
         );
 
         notifyQueueUpdated(saved.getProduct().getId(), saved.getReceiver().getId(), saved.getSender().getId());
@@ -478,13 +476,12 @@ public class NegotiationService {
         offer.setStatus(NegotiationStatus.STATUS_ACCEPTED);
         Negotiation accepted = repo.save(offer);
 
-        notificationService.sendNegotiationNotification(
+        notificationService.sendLocalizedNotification(
                 accepted.getSender().getId(),
                 accepted.getReceiver().getId(),
                 accepted.getId(),
                 "OFFER_ACCEPTED",
-                "Offre acceptee",
-                "Votre offre sur " + accepted.getProduct().getTitle() + " a ete acceptee"
+                accepted.getProduct().getTitle()
         );
 
         cancelIncompatibleOffers(accepted.getProduct().getId(), product.getQuantityAvailable(), accepted.getReceiver().getId());
@@ -623,13 +620,12 @@ public class NegotiationService {
             n.setStatus(NegotiationStatus.STATUS_AUTO_CANCELLED_STOCK);
                 repo.save(n);
 
-                notificationService.sendNegotiationNotification(
+                notificationService.sendLocalizedNotification(
                         n.getSender().getId(),
                         actorUserId,
                         n.getId(),
                         "OFFER_AUTO_CANCELLED_STOCK",
-                        "Offre annulee automatiquement",
-                        "Votre offre sur " + n.getProduct().getTitle() + " depasse la quantite restante"
+                        n.getProduct().getTitle()
                 );
             }
         }
@@ -645,13 +641,12 @@ public class NegotiationService {
             }
             double total = dto.getTotalAmount() != null ? dto.getTotalAmount() : 0.0;
             if (changedTotal > total) {
-                notificationService.sendNegotiationNotification(
+                notificationService.sendLocalizedNotification(
                         dto.getSenderId(),
                         changedOffer.getSender().getId(),
                         dto.getId(),
                         "OUTBID_BY_BETTER_OFFER",
-                        "Offre plus rentable detectee",
-                        "Une offre plus rentable que la votre est en tete de file pour " + changedOffer.getProduct().getTitle()
+                        changedOffer.getProduct().getTitle()
                 );
             }
         }
@@ -659,16 +654,17 @@ public class NegotiationService {
 
     private void notifyQueueUpdated(Long productId, Long sellerId, Long buyerId) {
         Product product = productRepo.findById(productId).orElse(null);
-        String productTitle = product != null ? product.getTitle() : "ce produit";
+        // Aucun libelle de repli en dur ici: un titre absent est remplace par
+        // NotificationMessages, seul a savoir dans quelle langue le faire.
+        String productTitle = product != null ? product.getTitle() : null;
 
         if (sellerId != null) {
-            notificationService.sendNegotiationNotification(
+            notificationService.sendLocalizedNotification(
                     sellerId,
                     buyerId,
                     null,
                     "QUEUE_UPDATED",
-                    "File des offres mise a jour",
-                    "La file des offres a ete mise a jour pour " + productTitle
+                    productTitle
             );
         }
     }

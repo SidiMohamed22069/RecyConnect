@@ -5,6 +5,7 @@ import com.project.RecyConnect.DTO.PublicUserDTO;
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Role;
+import com.project.RecyConnect.Model.SupportedLanguage;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Model.UserSession;
 import com.project.RecyConnect.DTO.BlockedUserDTO;
@@ -277,6 +278,50 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    // ------------------------------------------------------------------
+    // Langue des notifications
+    // ------------------------------------------------------------------
+
+    /**
+     * Choisit la langue dans laquelle l'appelant recoit ses notifications.
+     *
+     * <p>{@code PUT /api/users/me/language}, corps {@code {"language": "ar"}},
+     * reponse {@code {"language": "ar"}}.
+     *
+     * <p>Sous {@code /me} et non {@code /{id}} : la cible vient du jeton, pas
+     * de l'URL. Il n'existe donc aucune forme de la requete permettant de
+     * changer la langue de quelqu'un d'autre, et aucun controle de propriete a
+     * ne pas oublier d'ecrire.
+     *
+     * <p>Une langue inconnue est refusee plutot que silencieusement ramenee au
+     * francais: le mobile doit apprendre qu'il a demande l'impossible. Le repli
+     * sur le francais existe a la lecture, pour les comptes qui n'ont jamais
+     * choisi.
+     */
+    @PutMapping("/me/language")
+    public ResponseEntity<?> updateMyLanguage(
+            @RequestBody(required = false) LanguageUpdateRequest request) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String requested = request == null ? null : request.getLanguage();
+        Optional<SupportedLanguage> language = SupportedLanguage.parse(requested);
+        if (language.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "Unsupported language. Use one of: "
+                            + SupportedLanguage.supportedCodes()));
+        }
+
+        try {
+            UserDTO updated = service.updatePreferredLanguage(currentUser.getId(), language.get());
+            return ResponseEntity.ok(Map.of("language", updated.getPreferredLanguage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     /** Les comptes que l'appelant a bloques. */
     @GetMapping("/me/blocks")
     public ResponseEntity<List<BlockedUserDTO>> myBlocks() {
@@ -416,5 +461,11 @@ public class UserController {
     @lombok.Data
     public static class DeleteAccountRequest {
         private String password;
+    }
+
+    /** La langue demandee par {@code PUT /api/users/me/language}. */
+    @lombok.Data
+    public static class LanguageUpdateRequest {
+        private String language;
     }
 }

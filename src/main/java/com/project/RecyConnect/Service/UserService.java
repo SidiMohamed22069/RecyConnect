@@ -18,6 +18,7 @@ import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Product;
 import com.project.RecyConnect.Model.ProductStatus;
 import com.project.RecyConnect.Model.Role;
+import com.project.RecyConnect.Model.SupportedLanguage;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Repository.NegotiationRepository;
 import com.project.RecyConnect.Repository.ProductRepository;
@@ -57,6 +58,7 @@ public class UserService implements UserDetailsService {
         dto.setImageData(u.getImageData());
         dto.setRole(u.getRole());
         dto.setCreatedAt(u.getCreatedAt());
+        dto.setPreferredLanguage(SupportedLanguage.of(u).getCode());
         return dto;
     }
 
@@ -286,6 +288,21 @@ public class UserService implements UserDetailsService {
         return dto;
     }
     
+    /**
+     * Change la langue dans laquelle un compte recoit ses notifications.
+     *
+     * <p>Prend un {@link SupportedLanguage} et non une chaine: la validation de
+     * ce que le client a envoye appartient au point d'entree HTTP, qui seul
+     * peut en faire un 400 intelligible. Ici, la langue est deja connue comme
+     * valide et il ne reste qu'a l'ecrire.
+     */
+    public UserDTO updatePreferredLanguage(Long userId, SupportedLanguage language) {
+        return userRepository.findById(userId).map(user -> {
+            user.setPreferredLanguage(language.getCode());
+            return toDTO(userRepository.save(user));
+        }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
     public void updateFcmToken(Long userId, String fcmToken) {
         userRepository.findById(userId).ifPresent(user -> {
             user.setFcmToken(fcmToken);
