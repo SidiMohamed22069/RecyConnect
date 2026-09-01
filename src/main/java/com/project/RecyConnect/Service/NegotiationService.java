@@ -3,11 +3,15 @@ package com.project.RecyConnect.Service;
 import com.project.RecyConnect.DTO.EarningsDTO;
 import com.project.RecyConnect.DTO.NegotiationContactDTO;
 import com.project.RecyConnect.DTO.NegotiationDTO;
+import com.project.RecyConnect.DTO.NegotiationHistoryDTO;
+import com.project.RecyConnect.DTO.TransactionDTO;
 import com.project.RecyConnect.Model.Negotiation;
+import com.project.RecyConnect.Model.NegotiationHistory;
 import com.project.RecyConnect.Model.NegotiationStatus;
 import com.project.RecyConnect.Model.Product;
 import com.project.RecyConnect.Model.ProductStatus;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Repository.NegotiationHistoryRepository;
 import com.project.RecyConnect.Repository.NegotiationRepository;
 import com.project.RecyConnect.Repository.ProductRepository;
 import com.project.RecyConnect.Repository.UserRepo;
@@ -27,15 +31,18 @@ public class NegotiationService {
     private final ProductRepository productRepo;
     private final NotificationService notificationService;
     private final FileUrlService fileUrlService;
+    private final NegotiationHistoryRepository historyRepo;
 
     public NegotiationService(NegotiationRepository repo, UserRepo userRepo,
                               ProductRepository productRepo, NotificationService notificationService,
-                              FileUrlService fileUrlService) {
+                              FileUrlService fileUrlService,
+                              NegotiationHistoryRepository historyRepo) {
         this.repo = repo;
         this.userRepo = userRepo;
         this.productRepo = productRepo;
         this.notificationService = notificationService;
         this.fileUrlService = fileUrlService;
+        this.historyRepo = historyRepo;
     }
 
     private NegotiationDTO toDTO(Negotiation n) {
@@ -155,6 +162,7 @@ public class NegotiationService {
         offer.setStatus(NegotiationStatus.STATUS_PENDING);
 
         Negotiation savedEntity = repo.save(offer);
+        recordHistory(savedEntity, sender, "OFFER");
         NegotiationDTO saved = toDTO(savedEntity);
 
         notificationService.sendOfferNotification(
@@ -185,6 +193,7 @@ public class NegotiationService {
                 existing.setQuantity(dto.getQuantity());
             }
             Negotiation updated = repo.save(existing);
+            recordHistory(updated, updated.getSender(), "UPDATED");
 
             notificationService.sendNegotiationNotification(
                     updated.getReceiver().getId(),
@@ -262,6 +271,150 @@ public class NegotiationService {
 
         notifyQueueUpdated(saved.getProduct().getId(), saved.getReceiver().getId(), saved.getSender().getId());
         return toDTO(saved);
+    }
+
+    /**
+     * La contre-proposition du vendeur: "pas a ce prix-la, mais a celui-ci".
+     *
+     * <p>C'est la troisieme reponse d'une negociation reelle, et la plus
+     * frequente; le vendeur n'avait jusqu'ici que deux boutons, accepter ou
+     * refuser — c'est-a-dire perdre l'acheteur pour deux ouguiyas d'ecart.
+     *
+     * <p>L'offre reste en attente et change de main: c'est desormais a
+     * l'acheteur de repondre. Le fil d'historique conserve les deux montants,
+     * sans quoi la contre-proposition effacerait l'offre d'origine.
+     */
+    @Transactional
+    public NegotiationDTO counterBySeller(Long negotiationId, Long sellerId,
+                                          Double price, Integer quantity) {
+        Negotiation offer = repo.findById(negotiationId)
+                .orElseThrow(() -> new RuntimeException("Negotiation not found"));
+
+        User seller = sellerOf(offer);
+        if (seller == null || !seller.getId().equals(sellerId)) {
+            throw new RuntimeException("Only product owner can counter this offer");
+        }
+        if (!NegotiationStatus.STATUS_PENDING.equalsIgnoreCase(offer.getStatus())) {
+            throw new RuntimeException("Only pending offers can be countered");
+        }
+        if (price != null && price <= 0) {
+            throw new RuntimeException("Unit price must be greater than 0");
+        }
+        if (quantity != null && quantity <= 0) {
+            throw new RuntimeException("Quantity must be greater than 0");
+        }
+        if (price == null && quantity == null) {
+            throw new RuntimeException("A counter-offer must change the price or the quantity");
+        }
+
+        // Une contre-proposition ne peut pas porter sur plus que le stock
+        // restant: elle serait annulee d'office a la premiere revision de
+        // quantite, et l'acheteur aurait accepte une offre morte.
+        Product product = offer.getProduct();
+        long available = product != null && product.getQuantityAvailable() != null
+                ? product.getQuantityAvailable() : 0L;
+        int newQuantity = quantity != null ? quantity
+                : (offer.getQuantity() != null ? offer.getQuantity() : 0);
+        if (newQuantity > available) {
+            throw new RuntimeException("Counter-offer quantity exceeds remaining stock");
+        }
+
+        if (price != null) offer.setPrice(price);
+        if (quantity != null) offer.setQuantity(quantity);
+        Negotiation countered = repo.save(offer);
+        recordHistory(countered, seller, "COUNTER_OFFER");
+
+        notificationService.sendNegotiationNotification(
+                countered.getSender().getId(),
+                seller.getId(),
+                countered.getId(),
+                "OFFER_COUNTERED",
+                "Contre-proposition recue",
+                seller.getUsername() + " vous propose " + countered.getPrice()
+                        + " pour " + countered.getQuantity()
+                        + " sur " + countered.getProduct().getTitle()
+        );
+
+        return toDTO(countered);
+    }
+
+    /** Le fil d'une negociation, du plus ancien tour au plus recent. */
+    @Transactional(readOnly = true)
+    public List<NegotiationHistoryDTO> historyOf(Long negotiationId) {
+        return historyRepo.findByNegotiationIdOrderByCreatedAtAsc(negotiationId).stream()
+                .map(entry -> {
+                    NegotiationHistoryDTO dto = new NegotiationHistoryDTO();
+                    dto.setId(entry.getId());
+                    dto.setCreatedAt(entry.getCreatedAt());
+                    dto.setNegotiationId(negotiationId);
+                    dto.setAuthorId(entry.getAuthor() != null ? entry.getAuthor().getId() : null);
+                    dto.setAuthorUsername(entry.getAuthor() != null ? entry.getAuthor().getUsername() : null);
+                    dto.setKind(entry.getKind());
+                    dto.setPrice(entry.getPrice());
+                    dto.setQuantity(entry.getQuantity());
+                    dto.setTotalAmount(entry.getPrice() != null && entry.getQuantity() != null
+                            ? entry.getPrice() * entry.getQuantity() : null);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Le journal des transactions conclues d'un utilisateur, achats et ventes
+     * confondus.
+     *
+     * <p>Le total des gains etait deja affiche; ce qui manquait, c'est le
+     * detail qui en fait un outil de gestion — quelle date, quel lot, quelle
+     * contrepartie, quelle quantite.
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> transactionsFor(Long userId) {
+        return repo.findAcceptedForUser(userId).stream()
+                .map(n -> {
+                    User buyer = n.getSender();
+                    User seller = sellerOf(n);
+                    boolean isSeller = seller != null && seller.getId().equals(userId);
+                    User counterpart = isSeller ? buyer : seller;
+
+                    TransactionDTO dto = new TransactionDTO();
+                    dto.setNegotiationId(n.getId());
+                    dto.setDate(n.getCreatedAt());
+                    dto.setRole(isSeller ? "SELLER" : "BUYER");
+                    if (n.getProduct() != null) {
+                        dto.setProductId(n.getProduct().getId());
+                        dto.setProductTitle(n.getProduct().getTitle());
+                        dto.setProductUnit(n.getProduct().getUnit());
+                    }
+                    if (counterpart != null) {
+                        dto.setCounterpartId(counterpart.getId());
+                        dto.setCounterpartUsername(counterpart.getUsername());
+                    }
+                    dto.setQuantity(n.getQuantity());
+                    dto.setUnitPrice(n.getPrice());
+                    dto.setTotalAmount(calculateTotalAmount(n));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Ajoute un tour au fil de la negociation.
+     *
+     * <p>Un fil incomplet vaut mieux qu'une negociation perdue: l'echec
+     * d'ecriture est avale, il ne doit pas annuler l'offre elle-meme.
+     */
+    private void recordHistory(Negotiation negotiation, User author, String kind) {
+        try {
+            historyRepo.save(NegotiationHistory.builder()
+                    .negotiation(negotiation)
+                    .author(author)
+                    .kind(kind)
+                    .price(negotiation.getPrice())
+                    .quantity(negotiation.getQuantity())
+                    .build());
+        } catch (RuntimeException e) {
+            // Le fil est un confort d'affichage, pas la source de verite.
+        }
     }
 
     @Transactional

@@ -11,23 +11,33 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import com.project.RecyConnect.DTO.NotificationPreferencesDTO;
+import com.project.RecyConnect.DTO.PublicUserDTO;
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Product;
 import com.project.RecyConnect.Model.ProductStatus;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
+import com.project.RecyConnect.Repository.NegotiationRepository;
 import com.project.RecyConnect.Repository.ProductRepository;
+import com.project.RecyConnect.Repository.ReviewRepository;
 import com.project.RecyConnect.Repository.UserRepo;
 
 @Service
 public class UserService implements UserDetailsService {
     private final UserRepo userRepository;
     private final ProductRepository productRepository;
+    private final NegotiationRepository negotiationRepository;
+    private final ReviewRepository reviewRepository;
 
-    public UserService(UserRepo userRepository, ProductRepository productRepository) {
+    public UserService(UserRepo userRepository, ProductRepository productRepository,
+                       NegotiationRepository negotiationRepository,
+                       ReviewRepository reviewRepository) {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.negotiationRepository = negotiationRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     @Override
@@ -188,9 +198,92 @@ public class UserService implements UserDetailsService {
             statsDTO.setRecycledCount(recycledCount);
             statsDTO.setAvailableCount(availableCount);
             statsDTO.setRecyclingRate(recyclingRate);
-            
+            Long recycledQuantity = negotiationRepository.sumAcceptedQuantityBySellerId(userId);
+            statsDTO.setRecycledQuantity(recycledQuantity != null ? recycledQuantity : 0L);
+            statsDTO.setMemberSince(user.getCreatedAt());
+
             return statsDTO;
         });
+    }
+
+    /**
+     * La fiche publique d'un vendeur: ce qu'un acheteur a le droit de savoir
+     * avant de proposer une offre.
+     *
+     * <p>Ni numero, ni role, ni rien qui permette de remonter au compte:
+     * c'est tout l'objet d'un DTO distinct de {@link UserDTO}.
+     */
+    public Optional<PublicUserDTO> getPublicProfile(Long userId) {
+        return userRepository.findById(userId).map(user -> {
+            List<Product> visible = productRepository.findByUserId(userId).stream()
+                    .filter(p -> p.getStatus() != ProductStatus.ARCHIVED)
+                    .collect(Collectors.toList());
+
+            PublicUserDTO dto = new PublicUserDTO();
+            dto.setId(user.getId());
+            dto.setUsername(user.getUsername());
+            dto.setImageData(user.getImageData());
+            dto.setMemberSince(user.getCreatedAt());
+            dto.setPublishedCount(visible.size());
+            dto.setRecycledCount((int) visible.stream()
+                    .filter(p -> p.getStatus() == ProductStatus.RECYCLED)
+                    .count());
+
+            Long accepted = negotiationRepository.countAcceptedBySellerId(userId);
+            dto.setCompletedDeals(accepted != null ? accepted : 0L);
+
+            Long received = negotiationRepository.countReceivedBySellerId(userId);
+            Long answered = negotiationRepository.countAnsweredBySellerId(userId);
+            // Nul plutot que 0 % tant qu'aucune offre n'est arrivee: il n'y a
+            // rien a mesurer, et un 0 % se lirait comme un mauvais eleve.
+            if (received != null && received > 0) {
+                dto.setResponseRate((int) Math.round(
+                        ((answered != null ? answered : 0L) * 100.0) / received));
+            }
+
+            dto.setReviewAverage(reviewRepository.averageRatingByTargetId(userId));
+            dto.setReviewCount(reviewRepository.countByTargetId(userId));
+            return dto;
+        });
+    }
+
+    /**
+     * Les preferences de notification d'un compte.
+     *
+     * <p>Un choix jamais exprime vaut consentement — c'etait le comportement
+     * avant l'ajout des colonnes, et le changer couperait sans preavis les
+     * notifications de tous les comptes existants.
+     */
+    public NotificationPreferencesDTO getNotificationPreferences(Long userId) {
+        return userRepository.findById(userId)
+                .map(UserService::toPreferences)
+                .orElseGet(UserService::defaultPreferences);
+    }
+
+    public Optional<NotificationPreferencesDTO> updateNotificationPreferences(
+            Long userId, NotificationPreferencesDTO dto) {
+        return userRepository.findById(userId).map(user -> {
+            if (dto.getOffers() != null) user.setNotifyOffers(dto.getOffers());
+            if (dto.getSystem() != null) user.setNotifySystem(dto.getSystem());
+            if (dto.getPromotions() != null) user.setNotifyPromotions(dto.getPromotions());
+            return toPreferences(userRepository.save(user));
+        });
+    }
+
+    private static NotificationPreferencesDTO toPreferences(User user) {
+        NotificationPreferencesDTO dto = new NotificationPreferencesDTO();
+        dto.setOffers(user.getNotifyOffers() == null || user.getNotifyOffers());
+        dto.setSystem(user.getNotifySystem() == null || user.getNotifySystem());
+        dto.setPromotions(user.getNotifyPromotions() == null || user.getNotifyPromotions());
+        return dto;
+    }
+
+    private static NotificationPreferencesDTO defaultPreferences() {
+        NotificationPreferencesDTO dto = new NotificationPreferencesDTO();
+        dto.setOffers(true);
+        dto.setSystem(true);
+        dto.setPromotions(true);
+        return dto;
     }
     
     public void updateFcmToken(Long userId, String fcmToken) {

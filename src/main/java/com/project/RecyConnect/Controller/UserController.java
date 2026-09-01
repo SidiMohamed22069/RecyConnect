@@ -1,5 +1,7 @@
 package com.project.RecyConnect.Controller;
 
+import com.project.RecyConnect.DTO.NotificationPreferencesDTO;
+import com.project.RecyConnect.DTO.PublicUserDTO;
 import com.project.RecyConnect.DTO.UserDTO;
 import com.project.RecyConnect.DTO.UserStatsDTO;
 import com.project.RecyConnect.Model.Role;
@@ -315,6 +317,54 @@ public class UserController {
     @GetMapping("/{id}/stats")
     public ResponseEntity<UserStatsDTO> getUserStats(@PathVariable Long id) {
         return service.getUserStats(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * La fiche publique d'un vendeur.
+     *
+     * <p>"A qui ai-je affaire ?" est la premiere question d'un acheteur sur une
+     * place de marche entre inconnus, et aucun ecran n'y repondait. Ce chemin
+     * existe pour y repondre <em>sans</em> rouvrir {@code /api/users/{id}},
+     * qui porte le numero de telephone et permettait de parcourir l'annuaire:
+     * on n'y trouve ni numero, ni role, ni jeton.
+     *
+     * <p>Lisible sans compte, comme le catalogue: c'est la meme page que celle
+     * qu'un lien partage fait ouvrir.
+     */
+    @GetMapping("/{id}/public")
+    public ResponseEntity<PublicUserDTO> getPublicProfile(@PathVariable Long id) {
+        return service.getPublicProfile(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Les preferences de notification du compte connecte.
+     *
+     * <p>Toujours celles de l'appelant: elles n'ont aucune raison d'etre
+     * lisibles — encore moins modifiables — par un tiers, fut-il
+     * administrateur.
+     */
+    @GetMapping("/me/notification-preferences")
+    public ResponseEntity<NotificationPreferencesDTO> getNotificationPreferences() {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(service.getNotificationPreferences(currentUser.getId()));
+    }
+
+    @RequestMapping(value = "/me/notification-preferences",
+                    method = { RequestMethod.PUT, RequestMethod.PATCH })
+    public ResponseEntity<NotificationPreferencesDTO> updateNotificationPreferences(
+            @RequestBody NotificationPreferencesDTO dto) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return service.updateNotificationPreferences(currentUser.getId(), dto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

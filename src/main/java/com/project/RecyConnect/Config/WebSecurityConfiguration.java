@@ -53,15 +53,38 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/legal", "/legal/", "/legal/**")
                         .permitAll()
 
+                        // Page web d'une annonce, pour le partage.
+                        // Le destinataire d'un lien WhatsApp n'a, par
+                        // definition, pas de compte: derriere une
+                        // authentification, le lien ne montrerait rien et ne
+                        // serait pas partage deux fois. La page ne rend que ce
+                        // que rend deja le catalogue anonyme.
+                        .requestMatchers(HttpMethod.GET, "/p/**")
+                        .permitAll()
+
                         // --- Lecture publique: uniquement le catalogue ---
                         // Volontairement retires de cette liste:
                         //  - /api/notifications/**  : boites de reception privees
                         //  - /api/negotiations/**   : prix et volumes commerciaux
                         //  - /api/users/**          : donnees personnelles, enumeration de numeros
+                        //
+                        // Deux exceptions nominatives, et deux seulement:
+                        //  - /api/users/{id}/public : la fiche vendeur, batie
+                        //    sur un DTO qui ne porte ni numero ni role. C'est
+                        //    la reponse a "a qui ai-je affaire ?", que le
+                        //    catalogue anonyme doit pouvoir donner.
+                        //  - /api/reviews/user/**   : les avis recus. Une note
+                        //    qui ne se verrait qu'une fois connecte ne
+                        //    rassurerait personne au moment ou l'on hesite.
+                        // Le reste de /api/users/** et de /api/reviews/**
+                        // (deposer un avis, lire ses veilles) reste ferme.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/categories/**",
                                 "/api/products", "/api/products/{id}",
                                 "/api/products/search", "/api/products/category/**", "/api/products/user/**",
+                                "/api/products/{id}/similar", "/api/products/locations",
+                                "/api/users/{id}/public",
+                                "/api/reviews/user/**",
                                 "/api/files/{filename:.+}")
                         .permitAll()
 
