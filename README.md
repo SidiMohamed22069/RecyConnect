@@ -91,7 +91,7 @@ connue.
 | `FCM_SERVICE_ACCOUNT_KEY` | non | `service-account-key.json` | Clé de service Firebase, à placer dans `src/main/resources/` |
 | `CATEGORY_SEED_ENABLED` | non | `true` | Crée le catalogue des catégories au démarrage (voir *Données d'amorçage*) |
 | `ADMIN_SEED_ENABLED` / `ADMIN_SEED_PASSWORD` | non | `true` / — | Compte administrateur d'amorçage. Désactivé en prod |
-| `DEMO_SEED_ENABLED` / `DEMO_SEED_PASSWORD` | non | `false` / — | Jeu de démonstration : 3 comptes, 10 annonces |
+| `DEMO_SEED_ENABLED` / `DEMO_SEED_PASSWORD` | non | `false` / — | Jeu de démonstration : 4 comptes, 10 annonces situées, 9 offres |
 | `APP_VERSION_MINIMUM` | non | — (vide) | Version mobile minimale supportée. En deçà, l'application affiche un écran de mise à jour **bloquant**. Vide = aucun blocage |
 | `APP_VERSION_LATEST` | non | — (vide) | Dernière version publiée. Au-dessus, l'application propose une mise à jour facultative |
 | `APP_VERSION_ANDROID_URL` / `APP_VERSION_IOS_URL` | non | fiche Play / — | Liens ouverts par le bouton « Mettre à jour ». `https` obligatoire |
@@ -110,7 +110,7 @@ ils ne créent que ce qui manque et ne modifient jamais une ligne existante.
 |---|---|---|
 | `CategorySeeder` | **oui** (prod comprise) | Les 5 catégories de déchets, traduites en fr/ar/en |
 | `AdminSeeder` | oui en dev, non en prod | Le premier compte `ADMIN` |
-| `DemoSeeder` | **non** | 3 comptes mauritaniens et 10 annonces de démonstration |
+| `DemoSeeder` | **non** | 4 comptes mauritaniens, 10 annonces situées dans Nouakchott et leurs offres |
 
 ### Catalogue des catégories
 
@@ -129,9 +129,28 @@ dupliquées, pour ne pas détacher les annonces déjà classées.
 DEMO_SEED_ENABLED=true DEMO_SEED_PASSWORD=<mot-de-passe> ./mvnw spring-boot:run
 ```
 
-Crée `Sidi Mohamed Ould Ahmed`, `Mariem Mint Abdellahi` et `Ahmedou Ould Cheikhna`, puis
-dix annonces réparties sur les cinq catégories et trois statuts. Les trois comptes
-partagent `DEMO_SEED_PASSWORD` ; la connexion se fait au format `222XXXXXXXX`.
+Crée trois vendeurs — `Sidi Mohamed Ould Ahmed`, `Mariem Mint Abdellahi`,
+`Ahmedou Ould Cheikhna` — et un collecteur qui achète, `Khadijetou Mint Baba`. Les quatre
+comptes partagent `DEMO_SEED_PASSWORD` ; la connexion se fait au format `222XXXXXXXX`.
+
+Le jeu de données couvre les écrans que des annonces seules laissent vides :
+
+- **Dix annonces situées**, réparties sur les cinq catégories et trois statuts. Chacune
+  porte sa moughataa **et** son point GPS — placé par rapport au centre du quartier
+  déclaré, jamais en dehors. Sans coordonnées, `/api/products/map` et
+  `/api/products/nearby` répondent une liste vide.
+- **Les huit moughataas de Nouakchott**, jamais `autre` : cette zone-là n'a pas de centre,
+  donc rien à afficher sur la carte.
+- **Les deux niveaux de `geoPrecision`**, pour voir la différence entre un point exact et
+  une zone floutée à 300 m sans créer d'annonce à la main.
+- **Neuf offres** dans les quatre états (`pending`, `accepted`, `rejected`, `cancelled`),
+  avec leur fil de négociation et deux contre-propositions. Le stock restant tient compte
+  des offres acceptées, exactement comme le ferait `NegotiationService.acceptBySeller`.
+- **Trois langues de notification** (fr, ar, en) réparties sur les comptes.
+
+Sur une base de démonstration remplie avant la carte, les annonces déjà présentes sont
+**situées après coup** au démarrage : seuls les champs manquants sont complétés, une
+annonce déplacée à la main pendant une démonstration n'est jamais ramenée en arrière.
 
 À laisser à `false` partout ailleurs : des annonces fictives sur un environnement ouvert
 au public passeraient pour de vraies offres. Si le numéro d'un compte de démonstration
