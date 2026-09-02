@@ -51,6 +51,22 @@ public class User implements UserDetails {
     private String fcmToken; // Token FCM pour les notifications push
 
     /**
+     * Trois interrupteurs de notification, plutot qu'un choix binaire.
+     *
+     * <p>L'utilisateur ne pouvait que tout recevoir ou tout couper depuis les
+     * reglages du systeme — et couper les push d'une place de marche, c'est
+     * manquer l'offre qu'on attendait. Les magasins d'applications attendent
+     * par ailleurs ce reglage dans l'application elle-meme.
+     *
+     * <p>Nuls pour les comptes anterieurs a l'ajout des colonnes: l'absence de
+     * choix vaut consentement, comme avant, et le service le traduit en
+     * "active".
+     */
+    private Boolean notifyOffers;
+    private Boolean notifySystem;
+    private Boolean notifyPromotions;
+
+    /**
      * Langue dans laquelle ce compte recoit ses notifications ("fr", "ar", "en").
      *
      * <p>La colonne porte son defaut cote base plutot que cote Java: un
