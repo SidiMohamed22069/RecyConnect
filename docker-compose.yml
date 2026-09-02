@@ -64,8 +64,9 @@ services:
       # mobile n'a aucune categorie a proposer.
       CATEGORY_SEED_ENABLED: ${CATEGORY_SEED_ENABLED:-true}
       # Jeu de donnees de demonstration (voir Config/DemoSeeder.java).
-      # Trois comptes et dix annonces fictives: n'activer que sur un
-      # environnement de demonstration, jamais sur celui des vrais utilisateurs.
+      # Quatre comptes, dix annonces situees dans Nouakchott et leurs offres:
+      # n'activer que sur un environnement de demonstration, jamais sur celui
+      # des vrais utilisateurs.
       DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
       DEMO_SEED_PASSWORD: ${DEMO_SEED_PASSWORD:-}
       # Firebase Cloud Messaging: la cle est montee en volume (voir ci-dessous),

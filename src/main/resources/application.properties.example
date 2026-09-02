@@ -52,7 +52,8 @@ app.admin-seed.password=${ADMIN_SEED_PASSWORD:}
 app.category-seed.enabled=${CATEGORY_SEED_ENABLED:true}
 
 # --- Jeu de donnees de demonstration ---
-# Trois comptes mauritaniens et dix annonces (voir DemoSeeder).
+# Quatre comptes mauritaniens, dix annonces situees dans Nouakchott et leurs
+# offres (voir DemoSeeder).
 # Desactive par defaut: des annonces fictives sur un environnement ouvert au
 # public seraient prises pour de vraies offres.
 app.demo-seed.enabled=${DEMO_SEED_ENABLED:false}
