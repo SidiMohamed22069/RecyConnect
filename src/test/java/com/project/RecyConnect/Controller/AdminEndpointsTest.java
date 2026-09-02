@@ -319,7 +319,12 @@ class AdminEndpointsTest {
                 /* Ecrase sans distinction, ce champ rattachait au compte admin
                    toutes les annonces saisies pour autrui. */
                 .andExpect(jsonPath("$.userId").value(vendeur.getId()))
-                .andExpect(jsonPath("$.status").value("pending"))
+                /* Le statut demande n'est pas repris tel quel: une annonce
+                   creee en "pending" n'apparaissait dans aucune recherche, et
+                   rien nulle part ne la faisait passer a "available". C'est le
+                   serveur qui tranche desormais — voir
+                   ProductService.publishableStatus. */
+                .andExpect(jsonPath("$.status").value("available"))
                 .andExpect(jsonPath("$.unit").value("KG"));
     }
 

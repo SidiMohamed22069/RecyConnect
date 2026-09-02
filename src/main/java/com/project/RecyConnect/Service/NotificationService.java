@@ -91,8 +91,9 @@ public class NotificationService {
         Notification saved = repo.save(fromDTO(dto));
         NotificationDTO savedDTO = toDTO(saved);
         
-        // Envoyer en temps réel si receiverId est défini
-        if (dto.getReceiverId() != null) {
+        // Envoyer en temps réel si receiverId est défini — et si le
+        // destinataire accepte encore ce genre de notification.
+        if (dto.getReceiverId() != null && isDeliveryAllowed(dto.getReceiverId(), dto.getType())) {
             boolean isOnline = sessionManager.isUserConnected(dto.getReceiverId());
             
             if (isOnline) {
@@ -133,6 +134,11 @@ public class NotificationService {
     
     /**
      * Envoie une notification à un utilisateur (WebSocket si en ligne, FCM sinon)
+     *
+     * <p>La notification est enregistrée quoi qu'il arrive: couper un
+     * interrupteur doit faire taire le téléphone, pas effacer l'information.
+     * Elle reste donc lisible dans la boîte de réception de l'application;
+     * seule la remise immédiate — bandeau système ou WebSocket — est suspendue.
      */
     private void sendNotification(NotificationDTO dto) {
         // S'assurer que createdAt est défini
@@ -142,7 +148,11 @@ public class NotificationService {
         // 1. Sauvegarder en DB
         Notification saved = repo.save(fromDTO(dto));
         NotificationDTO savedDTO = toDTO(saved);
-        
+
+        if (!isDeliveryAllowed(dto.getReceiverId(), dto.getType())) {
+            return;
+        }
+
         // 2. Vérifier si user est connecté via WebSocket
         boolean isOnline = sessionManager.isUserConnected(dto.getReceiverId());
         
@@ -153,6 +163,36 @@ public class NotificationService {
             // User hors ligne → FCM (notification push)
             fcmService.sendPushNotification(dto.getReceiverId(), savedDTO);
         }
+    }
+
+    /**
+     * Le destinataire accepte-t-il encore ce genre de notification ?
+     *
+     * <p>Trois familles seulement, celles que proposent les réglages: les
+     * offres, les messages du service, les annonces de l'équipe. Un type
+     * inconnu est traité comme un message du service — un nouveau type ne doit
+     * pas se retrouver muet par défaut.
+     *
+     * <p>Une préférence jamais exprimée vaut consentement: c'était le
+     * comportement avant l'ajout des colonnes.
+     */
+    private boolean isDeliveryAllowed(Long receiverId, String type) {
+        if (receiverId == null) {
+            return false;
+        }
+        User receiver = userRepo.findById(receiverId).orElse(null);
+        if (receiver == null) {
+            return false;
+        }
+
+        String kind = type != null ? type.toUpperCase() : "";
+        if (kind.startsWith("OFFER") || kind.startsWith("QUEUE") || kind.startsWith("OUTBID")) {
+            return receiver.getNotifyOffers() == null || receiver.getNotifyOffers();
+        }
+        if (kind.equals("BROADCAST") || kind.startsWith("PROMO")) {
+            return receiver.getNotifyPromotions() == null || receiver.getNotifyPromotions();
+        }
+        return receiver.getNotifySystem() == null || receiver.getNotifySystem();
     }
     
     /**
@@ -258,30 +298,34 @@ public class NotificationService {
      *
      * <p>Seule notification qui echappe a la traduction, et c'est structurel:
      * son texte est saisi librement par un administrateur, il n'existe donc
-     * aucun libelle a traduire. L'envoi push passe d'ailleurs par le topic
-     * {@code all_users} — un message unique pour tout le parc, qui ne peut par
-     * construction pas varier selon le destinataire. Traduire un broadcast
-     * supposerait de demander ses trois versions a l'administrateur.
+     * aucun libelle a traduire. Traduire un broadcast supposerait de demander
+     * ses trois versions a l'administrateur.
+     *
+     * <p>L'envoi passait par le topic FCM {@code all_users} — un message
+     * unique pour tout le parc. Il part desormais compte par compte: un topic
+     * ne sait pas distinguer ceux qui ont coupe les annonces de l'equipe dans
+     * leurs reglages.
      */
     public void sendBroadcastToAllUsers(String title, String message) {
-        // 1. Créer une notification pour chaque user en DB
-        List<User> allUsers = userRepo.findAll();
-        
-        for (User user : allUsers) {
-            Notification notification = new Notification();
-            notification.setReceiver(user);
-            notification.setSender(null); // Pas de sender pour les notifications admin
+        // Compte par compte, et non par topic FCM: un topic ne sait pas
+        // distinguer ceux qui ont coupé les annonces de l'équipe dans leurs
+        // réglages. Chacun reçoit sa copie en base — la boîte de réception
+        // reste complète —, et seule la remise immédiate suit la préférence.
+        //
+        // Au passage, les comptes connectés reçoivent enfin la diffusion par
+        // WebSocket: le topic ne touchait que les appareils abonnés à FCM.
+        for (User user : userRepo.findAll()) {
+            NotificationDTO notification = new NotificationDTO();
+            notification.setReceiverId(user.getId());
+            notification.setSenderId(null); // Pas de sender pour les notifications admin
             notification.setTitle(title);
             notification.setMessage(message);
             notification.setType("BROADCAST");
             notification.setCreatedAt(OffsetDateTime.now());
             notification.setIsRead(false);
-            
-            repo.save(notification);
+
+            sendNotification(notification);
         }
-        
-        // 2. Envoyer via FCM Topic (tous les users abonnés)
-        fcmService.sendBroadcastNotification(title, message);
     }
     
     /**
