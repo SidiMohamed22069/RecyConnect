@@ -26,6 +26,31 @@ public interface NegotiationRepository extends JpaRepository<Negotiation, Long> 
     long countByProductIdAndStatusIgnoreCase(Long productId, String status);
 
     /**
+     * L'appelant a-t-il une offre acceptee sur cette annonce ?
+     *
+     * <p>C'est ce qui lui ouvre la position exacte du lot. La regle est la meme
+     * que pour l'echange des numeros : tant que rien n'est conclu, un vendeur
+     * particulier n'a pas a livrer son adresse a tous ceux qui ouvrent sa
+     * fiche.
+     */
+    boolean existsBySenderIdAndProductIdAndStatusIgnoreCase(Long senderId,
+                                                            Long productId,
+                                                            String status);
+
+    /**
+     * Le nombre d'offres qui attendent une reponse du vendeur.
+     *
+     * <p>Sert la pastille de l'onglet "Offres" de l'application. Elle etait
+     * jusqu'ici deduite des notifications, faute de ce compte : une
+     * notification perdue — permission refusee, application desinstallee un
+     * temps — et le vendeur ne savait pas qu'on l'attendait. Une requete de
+     * comptage, et le chiffre est exact.
+     */
+    @Query("SELECT COUNT(n) FROM Negotiation n "
+            + "WHERE n.product.user.id = :sellerId AND LOWER(n.status) = 'pending'")
+    long countPendingForSeller(@Param("sellerId") Long sellerId);
+
+    /**
      * Le journal des transactions conclues d'un utilisateur, des deux cotes.
      *
      * <p>Un collecteur professionnel est tour a tour vendeur et acheteur; un

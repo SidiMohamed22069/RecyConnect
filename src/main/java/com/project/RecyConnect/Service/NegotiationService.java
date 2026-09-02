@@ -499,6 +499,23 @@ public class NegotiationService {
         notifyQueueUpdated(productId, changedByUserId, null);
     }
 
+    /**
+     * Le nombre d'offres qui attendent une reponse du vendeur.
+     *
+     * <p>Sert la pastille de l'onglet "Offres" de l'application. Elle etait
+     * deduite des notifications recues, faute de ce compte : une notification
+     * perdue — permission refusee, application desinstallee un temps, jeton FCM
+     * perime — et le vendeur ignorait qu'on l'attendait. Un comptage rend le
+     * chiffre exact, en une requete, et sans dependre de ce qui a ete recu.
+     */
+    @Transactional(readOnly = true)
+    public long countPendingOffersFor(Long sellerId) {
+        if (sellerId == null) {
+            return 0L;
+        }
+        return repo.countPendingForSeller(sellerId);
+    }
+
     @Transactional(readOnly = true)
     public EarningsDTO getSellerEarnings(Long sellerId) {
         Double amount = repo.sumAcceptedAmountBySellerId(sellerId);

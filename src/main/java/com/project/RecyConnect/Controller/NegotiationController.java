@@ -309,6 +309,24 @@ public class NegotiationController {
         return ResponseEntity.ok(service.transactionsFor(currentUser.getId()));
     }
 
+    /**
+     * Combien d'offres attendent ma reponse.
+     *
+     * <p>Un seul nombre, appele au demarrage de l'application pour la pastille
+     * de l'onglet "Offres". Le compte etait jusqu'ici deduit des notifications,
+     * ce qui le rendait faux des qu'une notification manquait — et une pastille
+     * qui ment sur un chiffre est pire que pas de pastille.
+     */
+    @GetMapping("/pending/count")
+    public ResponseEntity<Map<String, Long>> countMyPendingOffers() {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(Map.of("count",
+                service.countPendingOffersFor(currentUser.getId())));
+    }
+
     @GetMapping("/earnings/me")
     public ResponseEntity<EarningsDTO> getMyEarnings() {
         User currentUser = userService.getCurrentUser();

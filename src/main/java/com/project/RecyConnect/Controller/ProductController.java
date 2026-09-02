@@ -108,6 +108,9 @@ public class ProductController {
             @RequestParam(required = false) Long minQuantity,
             @RequestParam(required = false) String unit,
             @RequestParam(required = false) String location,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) Double maxDistanceKm,
             @RequestParam(required = false) String sort,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
@@ -126,6 +129,11 @@ public class ProductController {
                 // une version installee de l'application peut envoyer un code
                 // que le serveur ne connait pas encore, ou l'inverse.
                 .location(Moughataa.parseOrNull(location))
+                // Un rayon sans centre ne veut rien dire : les trois vont
+                // ensemble, et le service ignore le critere s'il en manque un.
+                .centerLatitude(lat)
+                .centerLongitude(lng)
+                .maxDistanceKm(maxDistanceKm)
                 .hiddenUserIds(moderationService.hiddenUserIds(currentUserId))
                 .sort(sort)
                 .page(page)
@@ -133,6 +141,55 @@ public class ProductController {
                 .build();
 
         return service.search(criteria, currentUserId);
+    }
+
+    /**
+     * Les annonces visibles dans le rectangle affiche par la carte.
+     *
+     * <p>Lisible sans compte, comme le catalogue. Les positions rendues sont
+     * arrondies a 300 m sauf pour leur auteur : la carte est l'ecran ou la
+     * difference se voit.
+     *
+     * <p>Le rectangle est obligatoire — une carte sans cadre demanderait le
+     * catalogue entier, ce que ce point d'entree existe justement pour eviter.
+     */
+    @GetMapping("/map")
+    public List<ProductDTO> map(
+            @RequestParam double minLat,
+            @RequestParam double maxLat,
+            @RequestParam double minLng,
+            @RequestParam double maxLng,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Long excludeUserId,
+            @RequestParam(required = false) Long categoryId) {
+        User currentUser = userService.getCurrentUser();
+        Long currentUserId = currentUser != null ? currentUser.getId() : null;
+
+        return service.mapArea(minLat, maxLat, minLng, maxLng, limit,
+                excludeUserId, categoryId,
+                moderationService.hiddenUserIds(currentUserId), currentUserId);
+    }
+
+    /**
+     * Les annonces les plus proches d'un point, la plus proche d'abord.
+     *
+     * <p>Sert la section "Pres de vous" de l'accueil. Chaque ligne porte sa
+     * distance en kilometres — mais seulement si l'annonce a ses propres
+     * coordonnees : une distance calculee depuis le centre d'une moughataa
+     * annoncerait une precision que personne n'a mesuree.
+     */
+    @GetMapping("/nearby")
+    public List<ProductDTO> nearby(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Long excludeUserId) {
+        User currentUser = userService.getCurrentUser();
+        Long currentUserId = currentUser != null ? currentUser.getId() : null;
+
+        return service.nearby(lat, lng, radiusKm, limit, excludeUserId,
+                moderationService.hiddenUserIds(currentUserId), currentUserId);
     }
 
     @PostMapping
@@ -172,7 +229,7 @@ public class ProductController {
                 .body(Map.of("message", "You can only update your own products"));
         }
         try {
-            return ResponseEntity.ok(service.update(id, dto));
+            return ResponseEntity.ok(service.update(id, dto, currentUser.getId()));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -198,7 +255,7 @@ public class ProductController {
                 .body(Map.of("message", "You can only update your own products"));
         }
         try {
-            return ResponseEntity.ok(service.patch(id, dto));
+            return ResponseEntity.ok(service.patch(id, dto, currentUser.getId()));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -310,8 +367,13 @@ public class ProductController {
         }
         
         try {
-            // Admin peut tout modifier, y compris changer le propriétaire
-            return ResponseEntity.ok(service.update(id, dto));
+            // Admin peut tout modifier, y compris changer le propriétaire.
+            // Le point GPS exact ne lui est pas rendu pour autant : corriger
+            // une annonce ne demande pas de connaître l'adresse d'un
+            // particulier.
+            User currentUser = userService.getCurrentUser();
+            return ResponseEntity.ok(service.update(id, dto,
+                    currentUser != null ? currentUser.getId() : null));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }

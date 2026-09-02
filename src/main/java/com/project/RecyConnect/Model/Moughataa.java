@@ -16,21 +16,57 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * traduction cote mobile: le serveur ne rend jamais de libelle traduit.
  */
 public enum Moughataa {
-    TEVRAGH_ZEINA("tevragh_zeina"),
-    KSAR("ksar"),
-    SEBKHA("sebkha"),
-    DAR_NAIM("dar_naim"),
-    TOUJOUNINE("toujounine"),
-    ARAFAT("arafat"),
-    EL_MINA("el_mina"),
-    RIYAD("riyad"),
-    /** Hors des huit moughataas de Nouakchott, ou non precise. */
-    AUTRE("autre");
+    TEVRAGH_ZEINA("tevragh_zeina", 18.0975, -15.9855),
+    KSAR("ksar", 18.1006, -15.9633),
+    SEBKHA("sebkha", 18.0787, -15.9900),
+    DAR_NAIM("dar_naim", 18.1367, -15.9333),
+    TOUJOUNINE("toujounine", 18.1064, -15.8983),
+    ARAFAT("arafat", 18.0563, -15.9358),
+    EL_MINA("el_mina", 18.0500, -15.9700),
+    RIYAD("riyad", 18.0106, -15.8878),
+    /**
+     * Hors des huit moughataas de Nouakchott, ou non precise.
+     *
+     * <p>Sans centre: la zone designe precisement ce qui n'est dans aucune des
+     * huit autres, souvent hors de la ville. Lui donner le centre de Nouakchott
+     * inventerait un lieu.
+     */
+    AUTRE("autre", null, null);
 
     private final String value;
 
-    Moughataa(String value) {
+    /**
+     * Le centre approximatif de la moughataa, ou {@code null}.
+     *
+     * <p>C'est ce qui permet a la carte d'exister des le premier jour: aucune
+     * des annonces deja publiees ne porte de coordonnees, et attendre que les
+     * vendeurs en ajoutent aurait donne une carte vide pendant des semaines.
+     * Une annonce sans point s'affiche donc au centre de son quartier, annoncee
+     * comme approximative — jamais presentee comme une adresse.
+     *
+     * <p>Les memes valeurs existent cote mobile ({@code core/utils/moughataa.dart}):
+     * une annonce doit tomber au meme endroit, que la carte la place elle-meme
+     * ou que le serveur l'ait fait.
+     */
+    private final Double centroidLatitude;
+    private final Double centroidLongitude;
+
+    Moughataa(String value, Double centroidLatitude, Double centroidLongitude) {
         this.value = value;
+        this.centroidLatitude = centroidLatitude;
+        this.centroidLongitude = centroidLongitude;
+    }
+
+    public Double getCentroidLatitude() {
+        return centroidLatitude;
+    }
+
+    public Double getCentroidLongitude() {
+        return centroidLongitude;
+    }
+
+    public boolean hasCentroid() {
+        return centroidLatitude != null && centroidLongitude != null;
     }
 
     @JsonValue
