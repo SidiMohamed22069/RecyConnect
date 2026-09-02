@@ -33,10 +33,32 @@ public class ProductSearchCriteria {
     private String unit;
     private Moughataa location;
 
+    /**
+     * Le centre d'une recherche par rayon, et son rayon en kilometres.
+     *
+     * <p>Les trois vont ensemble : sans centre, un rayon ne veut rien dire, et
+     * le critere est alors ignore plutot que de vider le catalogue.
+     *
+     * <p>Le filtre accepte le centre de la moughataa comme point de repli pour
+     * les annonces qui n'ont pas de coordonnees : il ordonne et retranche, il
+     * n'affirme aucune distance a l'utilisateur. Sans ce repli, un rayon de
+     * 25 km ferait disparaitre presque tout le catalogue, dont les annonces
+     * n'ont pour la plupart pas encore de point.
+     */
+    private Double centerLatitude;
+    private Double centerLongitude;
+    private Double maxDistanceKm;
+
     /** Comptes bloques, dans un sens ou dans l'autre. */
     private Set<Long> hiddenUserIds;
 
-    /** {@code recent} (defaut), {@code price_asc}, {@code price_desc}, {@code quantity_desc}, {@code oldest}. */
+    /**
+     * {@code recent} (defaut), {@code price_asc}, {@code price_desc},
+     * {@code quantity_desc}, {@code oldest}, {@code distance}.
+     *
+     * <p>{@code distance} suppose un centre ; sans lui, il retombe sur
+     * {@code recent}.
+     */
     private String sort;
 
     /** Page demandee, a partir de 0. Nulle: pas de pagination. */

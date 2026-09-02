@@ -346,6 +346,8 @@ passe. Aucune liste de révocation à maintenir.
 | `GET /api/products/category/{id}` · `/user/{id}` | Produits par catégorie ou vendeur |
 | `GET /api/products/{id}/similar` | Autres annonces de la même catégorie |
 | `GET /api/products/locations` | Codes de moughataa acceptés par `location` |
+| `GET /api/products/map` | Annonces d'un rectangle de carte (`minLat`, `maxLat`, `minLng`, `maxLng`, `limit`, `excludeUserId`, `categoryId`) |
+| `GET /api/products/nearby` | Annonces les plus proches d'un point (`lat`, `lng`, `radiusKm`, `limit`, `excludeUserId`) |
 | `GET /api/users/{id}/public` | Fiche vendeur — ni numéro, ni rôle |
 | `GET /api/reviews/user/{id}` · `/{id}/summary` | Avis reçus et note moyenne |
 | `GET /p/{id}` | Page web d'une annonce, balises OpenGraph pour le partage |
@@ -354,12 +356,63 @@ passe. Aucune liste de révocation à maintenir.
 | `/ws/**` | Poignée de main WebSocket (le CONNECT STOMP exige un JWT) |
 
 `GET /api/products/search` accepte `query`, `categoryId`, `excludeUserId`,
-`minPrice`, `maxPrice`, `minQuantity`, `unit`, `location`, `sort`, `page` et
-`size`. Le tri vaut `recent` (défaut), `price_asc`, `price_desc`,
-`quantity_desc` ou `oldest` ; sans `size`, le catalogue part entier. La
-requête reste servie sans jeton, mais **signée elle en dit plus** : le serveur
-écarte alors les annonces des comptes bloqués et marque celles que l'appelant a
-enregistrées en favori.
+`minPrice`, `maxPrice`, `minQuantity`, `unit`, `location`, `lat`, `lng`,
+`maxDistanceKm`, `sort`, `page` et `size`. Le tri vaut `recent` (défaut),
+`price_asc`, `price_desc`, `quantity_desc`, `oldest` ou `distance` ; sans
+`size`, le catalogue part entier. La requête reste servie sans jeton, mais
+**signée elle en dit plus** : le serveur écarte alors les annonces des comptes
+bloqués et marque celles que l'appelant a enregistrées en favori.
+
+`lat`, `lng` et `maxDistanceKm` vont ensemble : un rayon sans centre est ignoré
+plutôt que de vider le catalogue. Le filtre accepte le centre de la moughataa
+comme point de repli pour les annonces sans coordonnées — il ordonne et
+retranche, il n'affirme aucune distance ; sans ce repli, un rayon ferait
+disparaître presque tout le catalogue.
+
+### 📍 Position d'une annonce
+
+Une annonce porte, en plus de sa moughataa (obligatoire), un point GPS
+facultatif : `latitude`, `longitude` et `geoPrecision` (`exact` ou `approx`,
+`approx` par défaut et en cas de valeur inconnue).
+
+**Le serveur stocke le point exact, mais ne le rend pas à tout le monde.** Le
+lot est souvent chez un particulier : publier son point exact revient à publier
+son adresse. Pour une annonce en `approx`, les lectures rendent le centre d'une
+case d'environ 300 m. Le point précis n'est servi qu'à trois conditions :
+
+* l'appelant est l'auteur de l'annonce — il doit pouvoir vérifier son point ;
+* le vendeur a choisi `exact` — une cour, un atelier, un entrepôt qui veut être
+  trouvé ;
+* l'appelant a une offre **acceptée** sur cette annonce, c'est-à-dire au moment
+  où les deux parties ont déjà échangé leurs numéros.
+
+Ce filtrage a lieu à l'écriture de la réponse (`ProductService.applyGeoVisibility`),
+et non dans l'application : une protection appliquée par le client n'en est pas
+une, la valeur précise ayant déjà quitté le serveur.
+
+`GET /api/products/nearby` ajoute `distanceKm` à chaque ligne — mais seulement
+pour les annonces qui ont leurs propres coordonnées : une distance calculée
+depuis le centre d'un quartier annoncerait une précision que personne n'a
+mesurée.
+
+### ⚠️ Statut à la création
+
+`POST /api/products` **ignore le `status` demandé** s'il n'est pas l'un de ceux
+qu'un vendeur choisit lui-même (`available`, `paused`, `recycled`) et retient
+`available`.
+
+C'est la correction d'une annonce invisible : l'application mobile envoyait
+`pending`, la recherche ne rend que les annonces `available`, et rien nulle part
+ne faisait passer une annonce de l'un à l'autre — il n'existe aucune file de
+modération. Toute annonce publiée depuis l'application était enregistrée, payée
+en données mobiles, et introuvable, y compris pour son auteur.
+
+Les annonces déjà bloquées ne se débloquent pas seules. Leur auteur peut les
+rendre disponibles depuis « mes annonces » ; en base, d'un coup :
+
+```sql
+UPDATE product SET status = 'AVAILABLE' WHERE status = 'PENDING';
+```
 
 ### 🔐 Authentifié
 
@@ -373,6 +426,7 @@ enregistrées en favori.
 | `GET /api/negotiations/{id}/history` | Fil des montants successifs, réservé aux parties |
 | `GET /api/negotiations/product/{id}/queue` | File des offres classée |
 | `GET /api/negotiations/earnings/me` | Revenus du vendeur connecté |
+| `GET /api/negotiations/pending/count` | Nombre d'offres qui attendent ma réponse (`{"count": 3}`) — la pastille de l'onglet « Offres » |
 | `GET /api/negotiations/history/me` | Journal des transactions conclues |
 | `PATCH /api/products/{id}/status` | `available` · `paused` · `recycled` |
 | `GET/POST/DELETE /api/favorites` · `/{productId}` | Annonces enregistrées |

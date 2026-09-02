@@ -1,5 +1,6 @@
 package com.project.RecyConnect.DTO;
 
+import com.project.RecyConnect.Model.GeoPrecision;
 import com.project.RecyConnect.Model.Moughataa;
 import com.project.RecyConnect.Model.ProductStatus;
 import lombok.Data;
@@ -20,6 +21,33 @@ public class ProductDTO {
 
     /** Moughataa declaree a la publication, ou {@code null}. */
     private Moughataa location;
+
+    /**
+     * Le point du lot, <b>tel qu'il doit etre montre a l'appelant</b>.
+     *
+     * <p>Ce n'est pas toujours le point stocke: pour une annonce en precision
+     * approximative, le serveur n'envoie a un tiers que le centre d'une case de
+     * 300 m. Le point exact ne sort que pour le vendeur lui-meme et pour
+     * l'acheteur dont l'offre a ete acceptee.
+     *
+     * <p>Le filtrage a lieu ici, a l'ecriture de la reponse, et non dans
+     * l'application: une protection appliquee par le client n'en est pas une,
+     * la valeur precise ayant deja quitte le serveur.
+     */
+    private Double latitude;
+    private Double longitude;
+
+    /** Ce que le vendeur a accepte de montrer, ou {@code null} sans point. */
+    private GeoPrecision geoPrecision;
+
+    /**
+     * Distance depuis le point demande, en kilometres.
+     *
+     * <p>Renseignee par les seules lectures qui ont un centre — {@code /nearby}
+     * et une recherche par rayon. Ailleurs, c'est au client de la calculer s'il
+     * connait sa position.
+     */
+    private Double distanceKm;
 
     private List<String> imageUrls;
     private Long categoryId;

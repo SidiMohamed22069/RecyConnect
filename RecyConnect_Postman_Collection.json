@@ -676,6 +676,21 @@
                 {
                   "key": "query",
                   "value": "plastique"
+                },
+                {
+                  "key": "lat",
+                  "value": "18.0975",
+                  "disabled": true
+                },
+                {
+                  "key": "lng",
+                  "value": "-15.9855",
+                  "disabled": true
+                },
+                {
+                  "key": "maxDistanceKm",
+                  "value": "10",
+                  "disabled": true
                 }
               ]
             }
@@ -701,7 +716,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.50,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"categoryId\": 1\n}"
+              "raw": "{\n    \"title\": \"Bouteilles en plastique\",\n    \"desc\": \"Lot de 50 bouteilles PET propres\",\n    \"price\": 25.5,\n    \"unit\": \"kg\",\n    \"quantityTotal\": 100,\n    \"quantityAvailable\": 100,\n    \"status\": \"available\",\n    \"categoryId\": 1,\n    \"location\": \"tevragh_zeina\",\n    \"latitude\": 18.0975,\n    \"longitude\": -15.9855,\n    \"geoPrecision\": \"approx\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/products",
@@ -712,7 +727,8 @@
                 "api",
                 "products"
               ]
-            }
+            },
+            "description": "Le statut demande est ignore s'il n'est pas choisissable par un vendeur (available, paused, recycled) : le serveur retient available. latitude/longitude/geoPrecision sont facultatifs et voyagent ensemble ; geoPrecision vaut approx par defaut."
           }
         },
         {
@@ -916,6 +932,101 @@
             },
             "description": "available | paused | recycled. Reserve au proprietaire ou a un administrateur."
           }
+        },
+        {
+          "name": "Get Products For Map",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/map?minLat=18.05&maxLat=18.15&minLng=-16.05&maxLng=-15.90&limit=200",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "map"
+              ],
+              "query": [
+                {
+                  "key": "minLat",
+                  "value": "18.05"
+                },
+                {
+                  "key": "maxLat",
+                  "value": "18.15"
+                },
+                {
+                  "key": "minLng",
+                  "value": "-16.05"
+                },
+                {
+                  "key": "maxLng",
+                  "value": "-15.90"
+                },
+                {
+                  "key": "limit",
+                  "value": "200"
+                },
+                {
+                  "key": "excludeUserId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryId",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Les annonces disponibles dans le rectangle affiche par la carte. Lisible sans compte. Les annonces sans coordonnees dont la moughataa a son centre dans le cadre sont incluses : sans elles, la carte serait vide, aucune annonce publiee avant son arrivee ne portant de point. Les positions rendues sont arrondies a 300 m sauf pour leur auteur."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Nearby Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/nearby?lat=18.0975&lng=-15.9855&radiusKm=10&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "nearby"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "18.0975"
+                },
+                {
+                  "key": "lng",
+                  "value": "-15.9855"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "10"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "excludeUserId",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Les annonces les plus proches d'un point, la plus proche d'abord. Chaque ligne porte distanceKm — mais seulement si l'annonce a ses propres coordonnees."
+          },
+          "response": []
         }
       ]
     },
@@ -1292,6 +1403,28 @@
             },
             "description": "Le journal des transactions conclues, ventes et achats."
           }
+        },
+        {
+          "name": "Count My Pending Offers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/negotiations/pending/count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "negotiations",
+                "pending",
+                "count"
+              ],
+              "query": []
+            },
+            "description": "Le nombre d'offres qui attendent ma reponse : {\"count\": 3}. Sert la pastille de l'onglet Offres de l'application."
+          },
+          "response": []
         }
       ]
     },

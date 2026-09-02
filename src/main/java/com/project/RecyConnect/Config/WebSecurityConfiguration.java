@@ -93,6 +93,14 @@ public class WebSecurityConfiguration {
                                 "/api/products", "/api/products/{id}",
                                 "/api/products/search", "/api/products/category/**", "/api/products/user/**",
                                 "/api/products/{id}/similar", "/api/products/locations",
+                                // La carte et la proximite se lisent sans
+                                // compte, comme le catalogue : c'est le premier
+                                // ecran qu'un visiteur regarde avant de decider
+                                // s'il s'inscrit. Les positions qui en sortent
+                                // sont arrondies pour tout le monde sauf leur
+                                // auteur — un anonyme n'obtient donc rien de
+                                // plus qu'un quartier.
+                                "/api/products/map", "/api/products/nearby",
                                 "/api/users/{id}/public",
                                 "/api/reviews/user/**",
                                 "/api/files/{filename:.+}")
