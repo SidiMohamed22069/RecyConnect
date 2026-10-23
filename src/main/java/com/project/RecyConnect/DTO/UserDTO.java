@@ -1,5 +1,6 @@
 package com.project.RecyConnect.DTO;
 
+import jakarta.validation.constraints.Size;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.project.RecyConnect.Model.Role;
 
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserDTO {
     private Long id;
+    @Size(min = 2, max = 50, message = "entre 2 et 50 caractères")
     private String username;
     private Long phone;
     private Role role;

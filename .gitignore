@@ -51,3 +51,7 @@ uploads/
 API_USER_ACCESS.md
 CODE_REVIEW.md
 src/main/resources/*.json
+
+# Classpath genere par dependency:build-classpath (lancement sans plugin)
+classpath.txt
+cp.txt

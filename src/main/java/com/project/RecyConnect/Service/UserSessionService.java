@@ -66,6 +66,29 @@ public class UserSessionService {
         return new SessionReplacementResult(next, previousFcmToken);
     }
 
+    /**
+     * Nouveau jeton FCM pour la session en cours (Firebase en fait tourner
+     * sans prevenir). Sans ce point d'entree, le serveur ne connaissait le
+     * jeton qu'a la connexion et les push cessaient apres une rotation.
+     *
+     * @return {@code false} si le compte n'a pas de session, ou si
+     *         {@code deviceId} (fourni) n'est pas celui de la session.
+     */
+    @Transactional
+    public boolean updateFcmToken(Long userId, String deviceId, String fcmToken) {
+        Optional<UserSession> current = userSessionRepository.findById(userId);
+        if (current.isEmpty()) {
+            return false;
+        }
+        UserSession session = current.get();
+        if (deviceId != null && !deviceId.isBlank() && !deviceId.equals(session.getDeviceId())) {
+            return false;
+        }
+        session.setFcmToken(fcmToken);
+        userSessionRepository.save(session);
+        return true;
+    }
+
     public Optional<UserSession> findByUserId(Long userId) {
         return userSessionRepository.findById(userId);
     }

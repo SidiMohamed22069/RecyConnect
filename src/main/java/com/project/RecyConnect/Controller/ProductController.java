@@ -1,5 +1,6 @@
 package com.project.RecyConnect.Controller;
 
+import jakarta.validation.Valid;
 import com.project.RecyConnect.DTO.ProductDTO;
 import com.project.RecyConnect.DTO.ProductSearchCriteria;
 import com.project.RecyConnect.Model.Moughataa;
@@ -7,6 +8,7 @@ import com.project.RecyConnect.Model.ProductStatus;
 import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Service.ModerationService;
+import com.project.RecyConnect.Service.ProductDeletionService;
 import com.project.RecyConnect.Service.ProductService;
 import com.project.RecyConnect.Service.UserService;
 import org.springframework.http.HttpStatus;
@@ -23,17 +25,34 @@ public class ProductController {
     private final ProductService service;
     private final UserService userService;
     private final ModerationService moderationService;
+    private final ProductDeletionService deletionService;
 
     public ProductController(ProductService service,
                              UserService userService,
-                             ModerationService moderationService) {
+                             ModerationService moderationService,
+                             ProductDeletionService deletionService) {
         this.service = service;
         this.userService = userService;
         this.moderationService = moderationService;
+        this.deletionService = deletionService;
     }
 
+    /**
+     * Le catalogue. L'administration voit tout ; le public ne voit ni les
+     * annonces en pause ni les archivees (resultat d'une suppression).
+     */
     @GetMapping
-    public List<ProductDTO> getAll() { return service.findAll(); }
+    public List<ProductDTO> getAll() { return publiclyVisible(service.findAll()); }
+
+    private List<ProductDTO> publiclyVisible(List<ProductDTO> rows) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser != null && currentUser.getRole() == Role.ADMIN) {
+            return rows;
+        }
+        return rows.stream()
+                .filter(p -> p.getStatus() != ProductStatus.PAUSED && p.getStatus() != ProductStatus.ARCHIVED)
+                .collect(java.util.stream.Collectors.toList());
+    }
 
     /**
      * La fiche d'une annonce.
@@ -87,7 +106,7 @@ public class ProductController {
 
     @GetMapping("/category/{categoryId}")
     public List<ProductDTO> getByCategory(@PathVariable Long categoryId) {
-        return service.findByCategoryId(categoryId);
+        return publiclyVisible(service.findByCategoryId(categoryId));
     }
 
     /**
@@ -193,7 +212,7 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductDTO> create(@RequestBody ProductDTO dto) {
+    public ResponseEntity<ProductDTO> create(@Valid @RequestBody ProductDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -210,7 +229,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody ProductDTO dto) {
+    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody ProductDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -236,7 +255,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<?> patch(@PathVariable Long id, @RequestBody ProductDTO dto) {
+    public ResponseEntity<?> patch(@PathVariable Long id, @Valid @RequestBody ProductDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -351,7 +370,9 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("message", "You can only delete your own products"));
         }
-        service.delete(id);
+        // Favoris, offres, fil et avis d'abord : un deleteById nu rompait la
+        // contrainte d'integrite des la premiere offre recue.
+        deletionService.delete(id);
         return ResponseEntity.noContent().build();
     }
 

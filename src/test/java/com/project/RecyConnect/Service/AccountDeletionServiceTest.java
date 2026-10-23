@@ -42,6 +42,10 @@ class AccountDeletionServiceTest {
     @Mock private UserBlockRepository blockRepo;
     @Mock private ReportRepository reportRepo;
     @Mock private UploadedFileStore fileStore;
+    @Mock private FavoriteRepository favoriteRepo;
+    @Mock private ReviewRepository reviewRepo;
+    @Mock private SearchAlertRepository searchAlertRepo;
+    @Mock private NegotiationHistoryRepository historyRepo;
 
     @InjectMocks private AccountDeletionService service;
 

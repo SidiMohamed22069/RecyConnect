@@ -277,8 +277,11 @@ class AdminEndpointsTest {
     @DisplayName("les photos s'envoient sur /api/files/upload, pas sur /api/files")
     @WithMockUser(username = "admin-test", roles = "ADMIN")
     void envoiDePhoto() throws Exception {
+        // Un vrai en-tete PNG : le serveur reconnait les images a leur
+        // signature, pas a l'extension ni au Content-Type annonces.
         MockMultipartFile photo = new MockMultipartFile(
-                "file", "annonce.png", MediaType.IMAGE_PNG_VALUE, new byte[] { 1, 2, 3 });
+                "file", "annonce.png", MediaType.IMAGE_PNG_VALUE,
+                new byte[] { (byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, 'I', 'H', 'D', 'R' });
 
         mvc.perform(multipart("/api/files/upload").file(photo))
                 .andExpect(status().isOk())

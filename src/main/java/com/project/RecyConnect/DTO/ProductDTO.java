@@ -1,5 +1,7 @@
 package com.project.RecyConnect.DTO;
 
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import com.project.RecyConnect.Model.GeoPrecision;
 import com.project.RecyConnect.Model.Moughataa;
 import com.project.RecyConnect.Model.ProductStatus;
@@ -11,11 +13,17 @@ import java.util.List;
 public class ProductDTO {
     private Long id;
     private OffsetDateTime createdAt;
+    @Size(max = 255, message = "255 caractères maximum")
     private String title;
+    @Size(max = 2000, message = "2000 caractères maximum")
     private String desc;
+    @PositiveOrZero(message = "doit être positif")
     private Double price;
+    @Size(max = 50)
     private String unit;
+    @PositiveOrZero(message = "doit être positive")
     private Long quantityTotal;
+    @PositiveOrZero(message = "doit être positive")
     private Long quantityAvailable;
     private ProductStatus status;
 

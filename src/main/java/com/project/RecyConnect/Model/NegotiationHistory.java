@@ -1,5 +1,7 @@
 package com.project.RecyConnect.Model;
 
+import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.OnDelete;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,11 +29,13 @@ public class NegotiationHistory {
     private OffsetDateTime createdAt;
 
     @ManyToOne(optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "negotiation_id")
     private Negotiation negotiation;
 
     /** L'auteur du tour: l'acheteur au depart, le vendeur s'il contre-propose. */
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "author_id")
     private User author;
 

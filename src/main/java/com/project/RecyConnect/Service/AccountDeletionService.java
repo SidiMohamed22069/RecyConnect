@@ -1,5 +1,6 @@
 package com.project.RecyConnect.Service;
 
+import com.project.RecyConnect.Model.Negotiation;
 import com.project.RecyConnect.Model.Product;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Repository.*;
@@ -47,6 +48,10 @@ public class AccountDeletionService {
     private final UserBlockRepository blockRepo;
     private final ReportRepository reportRepo;
     private final UploadedFileStore fileStore;
+    private final FavoriteRepository favoriteRepo;
+    private final ReviewRepository reviewRepo;
+    private final SearchAlertRepository searchAlertRepo;
+    private final NegotiationHistoryRepository historyRepo;
 
     public AccountDeletionService(UserRepo userRepo,
                                   ProductRepository productRepo,
@@ -56,7 +61,11 @@ public class AccountDeletionService {
                                   UserSessionRepository sessionRepo,
                                   UserBlockRepository blockRepo,
                                   ReportRepository reportRepo,
-                                  UploadedFileStore fileStore) {
+                                  UploadedFileStore fileStore,
+                                  FavoriteRepository favoriteRepo,
+                                  ReviewRepository reviewRepo,
+                                  SearchAlertRepository searchAlertRepo,
+                                  NegotiationHistoryRepository historyRepo) {
         this.userRepo = userRepo;
         this.productRepo = productRepo;
         this.negotiationRepo = negotiationRepo;
@@ -66,6 +75,10 @@ public class AccountDeletionService {
         this.blockRepo = blockRepo;
         this.reportRepo = reportRepo;
         this.fileStore = fileStore;
+        this.favoriteRepo = favoriteRepo;
+        this.reviewRepo = reviewRepo;
+        this.searchAlertRepo = searchAlertRepo;
+        this.historyRepo = historyRepo;
     }
 
     /**
@@ -97,32 +110,54 @@ public class AccountDeletionService {
             phoneVerificationRepo.deleteAll(phoneVerificationRepo.findByPhoneOrderByCreatedAtDesc(phone));
         }
 
-        // 5. Offres emises et recues.
-        negotiationRepo.deleteAll(negotiationRepo.findBySenderId(userId));
-        negotiationRepo.deleteAll(negotiationRepo.findByReceiverId(userId));
+        // 5. Veilles et favoris du compte, avis donnes et recus.
+        searchAlertRepo.deleteByUserId(userId);
+        favoriteRepo.deleteByUserId(userId);
+        reviewRepo.deleteByAuthorIdOrTargetId(userId, userId);
+        historyRepo.deleteByAuthorId(userId);
 
-        // 6. Les annonces, et d'abord les offres qui les visent : une offre
-        //    dont le produit disparait romprait la contrainte d'integrite.
+        // 6. Offres emises et recues, precedees de leur fil et de leurs avis
+        //    (tables v2 qui les referencent sans cascade).
+        List<Negotiation> offers = new ArrayList<>(negotiationRepo.findBySenderId(userId));
+        offers.addAll(negotiationRepo.findByReceiverId(userId));
+        deleteOffers(offers);
+
+        // 7. Les annonces, et d'abord ce qui les vise : favoris d'autrui et
+        //    offres (avec leur fil et leurs avis) — une offre dont le produit
+        //    disparait romprait la contrainte d'integrite.
         List<Product> products = productRepo.findByUserId(userId);
         List<String> imageUrls = new ArrayList<>();
+        if (!products.isEmpty()) {
+            favoriteRepo.deleteByProductIdIn(products.stream().map(Product::getId).toList());
+        }
         for (Product product : products) {
-            negotiationRepo.deleteAll(negotiationRepo.findByProductId(product.getId()));
+            deleteOffers(negotiationRepo.findByProductId(product.getId()));
             if (product.getImageUrls() != null) {
                 imageUrls.addAll(product.getImageUrls());
             }
         }
         productRepo.deleteAll(products);
 
-        // 7. Session ouverte, donc jeton en cours de validite.
+        // 8. Session ouverte, donc jeton en cours de validite.
         sessionRepo.findById(userId).ifPresent(sessionRepo::delete);
 
-        // 8. Le compte lui-meme.
+        // 9. Le compte lui-meme.
         userRepo.deleteById(userId);
 
-        // 9. Les photos, une fois la transaction validee seulement : effacees
+        // 10. Les photos, une fois la transaction validee seulement : effacees
         //    avant, un echec en fin de course les aurait perdues alors que les
         //    annonces, elles, seraient restees.
         deleteFilesAfterCommit(imageUrls, userId);
+    }
+
+    private void deleteOffers(List<Negotiation> offers) {
+        if (offers.isEmpty()) {
+            return;
+        }
+        List<Long> ids = offers.stream().map(Negotiation::getId).distinct().toList();
+        historyRepo.deleteByNegotiationIdIn(ids);
+        reviewRepo.deleteByNegotiationIdIn(ids);
+        negotiationRepo.deleteAll(offers);
     }
 
     private void deleteFilesAfterCommit(List<String> imageUrls, Long userId) {

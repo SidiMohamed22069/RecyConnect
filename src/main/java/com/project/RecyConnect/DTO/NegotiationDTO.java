@@ -1,5 +1,6 @@
 package com.project.RecyConnect.DTO;
 
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -12,7 +13,9 @@ public class NegotiationDTO {
     private Long receiverId;
     private Long productId;
     private String status;
+    @Positive(message = "le prix doit être supérieur à 0")
     private Double price;
+    @Positive(message = "la quantité doit être supérieure à 0")
     private Integer quantity;
     private Double totalAmount;
     private Integer priorityRank;

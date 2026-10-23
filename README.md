@@ -568,3 +568,37 @@ mot de passe PostgreSQL sont présents dans l'historique Git et doivent être r�
 | [CODE_REVIEW.md](CODE_REVIEW.md) | Revue de code : failles, correctifs, travail restant |
 | [API_USER_ACCESS.md](API_USER_ACCESS.md) | Détail des droits d'accès par endpoint |
 | `RecyConnect_Postman_Collection.json` | Collection Postman |
+
+## Déploiement de la v2 — ce qui change (revue du 23 octobre 2026)
+
+Détail et justification de chaque point : `../../REVUE_PRE_DEPLOIEMENT.md`.
+
+**Avant le premier démarrage v2 sur une base existante**
+- `pg_dump` de la base, puis exécuter `docs/migration-v2.sql` (doublons de nom/numéro à corriger,
+  `product.description` en `text`, index uniques). Hibernate crée le reste tout seul.
+
+**Nouvelles variables d'environnement** (voir `.env.example`)
+- `API_BIND_ADDRESS` (défaut `127.0.0.1`) : le port 8081 n'est plus publié sur Internet, c'est le
+  reverse proxy TLS qui expose l'API — `deploy/Caddyfile.example` donne la configuration Caddy
+  (TLS Let's Encrypt, relais WebSocket `/ws`).
+- `ANDROID_SHA256_FINGERPRINTS` : empreinte(s) du certificat de signature Play, servies par
+  `GET /.well-known/assetlinks.json` pour que les liens `https://…/p/{id}` ouvrent l'application.
+- `RATE_LIMIT_ENABLED` (défaut `true`) : limitation de débit sur `login`, `send-code`,
+  `verify-code`, `register`, `reset-password` (par adresse et par numéro, réponse 429).
+- `APP_MEM_LIMIT` / `JAVA_TOOL_OPTIONS` : mémoire du conteneur et de la JVM.
+
+**Contrat API durci** (le mobile 2.0.0 est aligné)
+- `ProductDTO.userPhone` n'est servi qu'au propriétaire ; `GET /api/users/{id}` rend la fiche
+  publique aux autres comptes ; `GET /api/users/by-phone/{phone}` est réservé à l'administration.
+- `GET /api/negotiations` : administration ; `/{id}`, `/sender/{id}`, `/receiver/{id}` : parties
+  seulement ; `/product/{id}` et `/queue` : tout pour le vendeur, ses propres offres pour les autres.
+  `PATCH /api/negotiations/{id}` ne change plus que prix et quantité (statut via `accept`/`reject`/
+  `counter`/`cancel`). Une annonce non `AVAILABLE` refuse les offres (409).
+- `/api/notifications/**` : rapporté au destinataire ; `POST` réservé à l'administration.
+- `/api/files/upload` : JPEG, PNG, WebP, GIF reconnus par signature (415 sinon) ; `DELETE` admin.
+- `PUT|PATCH /api/users/{id}` : nom et numéro uniques (409) ; changer de numéro exige
+  `POST /api/auth/verify-code` **authentifié** au préalable (le code est rattaché au compte).
+- Nouveau `POST|PUT /api/users/{id}/fcm-token` `{"token"}` : réenregistrement du jeton FCM après
+  rotation par Firebase.
+- Validation des corps (`@Valid`) : erreurs en 400 `{"message"}` ; conflits d'intégrité en 409.
+- CORS : seules les origines de `APP_CLIENT_URL` sont acceptées (HTTP et WebSocket).

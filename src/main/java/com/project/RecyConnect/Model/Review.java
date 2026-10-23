@@ -1,5 +1,7 @@
 package com.project.RecyConnect.Model;
 
+import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.OnDelete;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -40,16 +42,19 @@ public class Review {
 
     /** La transaction qui ouvre le droit d'ecrire. */
     @ManyToOne(optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "negotiation_id")
     private Negotiation negotiation;
 
     /** L'acheteur, auteur de l'avis. */
     @ManyToOne(optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "author_id")
     private User author;
 
     /** Le vendeur, sujet de l'avis. */
     @ManyToOne(optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "target_id")
     private User target;
 

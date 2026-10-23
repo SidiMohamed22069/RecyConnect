@@ -1,5 +1,6 @@
 package com.project.RecyConnect.Controller;
 
+import jakarta.validation.Valid;
 import com.project.RecyConnect.DTO.ReviewDTO;
 import com.project.RecyConnect.DTO.ReviewSummaryDTO;
 import com.project.RecyConnect.Model.User;
@@ -69,7 +70,7 @@ public class ReviewController {
      * mobile sur son ecran de connexion.
      */
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody ReviewDTO dto) {
+    public ResponseEntity<?> create(@Valid @RequestBody ReviewDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
