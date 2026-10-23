@@ -88,7 +88,11 @@ public class ProductService {
         // Add nested info
         dto.setCategoryName(p.getCategory() != null ? p.getCategory().getName() : null);
         dto.setUserName(p.getUser() != null ? p.getUser().getUsername() : null);
-        dto.setUserPhone(p.getUser() != null ? p.getUser().getPhone() : null);
+        // Le numero ne sort que pour le proprietaire : servi a tout le
+        // catalogue anonyme, il permettait de collecter l'annuaire des
+        // vendeurs. Les acheteurs passent par /api/negotiations/{id}/contact.
+        boolean isOwner = viewerId != null && p.getUser() != null && viewerId.equals(p.getUser().getId());
+        dto.setUserPhone(isOwner ? p.getUser().getPhone() : null);
         applyGeoVisibility(dto, p, viewerId, allowExact);
         return dto;
     }

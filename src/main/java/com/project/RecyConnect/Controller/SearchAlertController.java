@@ -1,5 +1,6 @@
 package com.project.RecyConnect.Controller;
 
+import jakarta.validation.Valid;
 import com.project.RecyConnect.DTO.SearchAlertDTO;
 import com.project.RecyConnect.Model.User;
 import com.project.RecyConnect.Service.SearchAlertService;
@@ -38,7 +39,7 @@ public class SearchAlertController {
     }
 
     @PostMapping
-    public ResponseEntity<SearchAlertDTO> create(@RequestBody SearchAlertDTO dto) {
+    public ResponseEntity<SearchAlertDTO> create(@Valid @RequestBody SearchAlertDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -49,7 +50,7 @@ public class SearchAlertController {
 
     @PutMapping("/{id}")
     public ResponseEntity<SearchAlertDTO> update(@PathVariable Long id,
-                                                 @RequestBody SearchAlertDTO dto) {
+                                                 @Valid @RequestBody SearchAlertDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

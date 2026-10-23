@@ -1,5 +1,8 @@
 package com.project.RecyConnect.Controller;
 
+import java.time.Duration;
+import com.project.RecyConnect.Service.UserService;
+import com.project.RecyConnect.Config.RateLimiter;
 import java.util.Map;
 import java.util.Objects;
 
@@ -46,6 +49,8 @@ public class AuthController {
     private final UserSessionService userSessionService;
     private final RefreshTokenService refreshTokenService;
     private final FCMService fcmService;
+    private final RateLimiter rateLimiter;
+    private final UserService userService;
 
     /** Longueur minimale d'un mot de passe, alignee sur l'inscription mobile. */
     private static final int MIN_PASSWORD_LENGTH = 6;
@@ -53,8 +58,23 @@ public class AuthController {
     /**
      * Étape 1: Envoyer un code de vérification au numéro de téléphone
      */
+    /** Le numero sous sa forme locale si elle se calcule, sinon tel quel : sert de cle de limitation. */
+    private static String normalizedOrRaw(String phone) {
+        if (phone == null) {
+            return "";
+        }
+        try {
+            String local = PhoneVerificationService.toLocalPhone(phone);
+            return local != null ? local : phone.trim();
+        } catch (RuntimeException e) {
+            return phone.trim();
+        }
+    }
+
     @PostMapping("/send-code")
     public ResponseEntity<?> sendVerificationCode(@RequestBody AuthDTO.SendCodeRequest request) {
+        // Cinq SMS par heure et par numero : au-dela, c'est de l'envoi en masse.
+        rateLimiter.checkOrThrow("send-code:phone:" + normalizedOrRaw(request.getPhone()), 5, Duration.ofHours(1));
         try {
             // Le code n'est JAMAIS renvoye dans la reponse: il ne doit transiter que par SMS.
             phoneVerificationService.sendVerificationCode(request.getPhone(), request.getIsForgetPassword());
@@ -74,9 +94,16 @@ public class AuthController {
         try {
             Long phoneToVerify = Long.parseLong(
                     PhoneVerificationService.toLocalPhone(request.getPhone()));
-            
-            boolean isValid = phoneVerificationService.verifyCodeBeforeRegistration(
-                phoneToVerify, request.getCode());
+            // Cinq essais par numero pendant la duree de vie d'un code (10 min) :
+            // un code a six chiffres ne se devine pas en cinq coups.
+            rateLimiter.checkOrThrow("verify-code:phone:" + phoneToVerify, 5, Duration.ofMinutes(10));
+
+            User currentUser = userService.getCurrentUser();
+            boolean isValid = currentUser != null
+                    // Changement de numero : le code est rattache au compte qui
+                    // l'a saisi, et PUT /api/users/{id} l'exigera.
+                    ? phoneVerificationService.bindVerifiedCodeToUser(phoneToVerify, request.getCode(), currentUser)
+                    : phoneVerificationService.verifyCodeBeforeRegistration(phoneToVerify, request.getCode());
             
             if (isValid) {
                 return ResponseEntity.ok(new AuthDTO.AuthResponse(
@@ -117,6 +144,15 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
+        if (request.getPassword() == null || request.getPassword().length() < MIN_PASSWORD_LENGTH) {
+            return ResponseEntity.badRequest().body(new AuthDTO.AuthResponse(
+                    "Password must be at least " + MIN_PASSWORD_LENGTH + " characters"));
+        }
+        if (request.getUsername() == null || request.getUsername().isBlank()) {
+            return ResponseEntity.badRequest().body(new AuthDTO.AuthResponse("Username is required"));
+        }
+        rateLimiter.checkOrThrow("verify-code:phone:" + phoneNumberToSave, 5, Duration.ofMinutes(10));
+
         // Vérifier ET consommer le code (usage unique) avec le numéro sans préfixe 222
         boolean isCodeValid = phoneVerificationService.consumeCode(
            phoneNumberToSave, request.getVerificationCode());
@@ -246,8 +282,17 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("deviceId and fcmToken are required"));
         }
 
-        Long phoneToSearch = Long.parseLong(PhoneVerificationService
-                .toLocalPhone(String.valueOf(request.getPhone())));
+        Long phoneToSearch;
+        try {
+            phoneToSearch = Long.parseLong(PhoneVerificationService
+                    .toLocalPhone(String.valueOf(request.getPhone())));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
+        }
+        // Dix essais par numero et par quart d'heure : freine la force brute
+        // sans enfermer un utilisateur qui se trompe deux fois.
+        rateLimiter.checkOrThrow("login:phone:" + phoneToSearch, 10, Duration.ofMinutes(15));
         
         // Find user by phone (sans préfixe 222)
         User user = userRepository.findByPhone(phoneToSearch);
@@ -388,9 +433,9 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Verification code is required"));
         }
 
-        if (request.getPassword() == null || request.getPassword().isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(new AuthDTO.AuthResponse("Password is required"));
+        if (request.getPassword() == null || request.getPassword().length() < MIN_PASSWORD_LENGTH) {
+            return ResponseEntity.badRequest().body(new AuthDTO.AuthResponse(
+                    "Password must be at least " + MIN_PASSWORD_LENGTH + " characters"));
         }
 
         Long phoneToSearch;
@@ -402,6 +447,7 @@ public class AuthController {
                     .body(new AuthDTO.AuthResponse("Numéro de téléphone invalide"));
         }
 
+        rateLimiter.checkOrThrow("verify-code:phone:" + phoneToSearch, 5, Duration.ofMinutes(10));
         boolean isCodeValid = phoneVerificationService.consumeCode(
                 phoneToSearch, request.getVerificationCode());
 

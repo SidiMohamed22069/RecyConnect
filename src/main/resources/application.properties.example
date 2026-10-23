@@ -68,6 +68,11 @@ spring.servlet.multipart.max-request-size=10MB
 # --- URLs de l'application ---
 # app.client.url: origines autorisees par le CORS, separees par des virgules
 app.client.url=${APP_CLIENT_URL:http://localhost:4200}
+# Limitation de debit des points d'entree d'authentification (false en dev si genant)
+app.rate-limit.enabled=${RATE_LIMIT_ENABLED:true}
+# Liens Android : empreinte(s) SHA-256 du certificat de signature, separees par des virgules
+app.android.package-name=${ANDROID_PACKAGE_NAME:com.recyconnect.app.neyan}
+app.android.sha256-fingerprints=${ANDROID_SHA256_FINGERPRINTS:}
 app.server.url=${APP_SERVER_URL:http://localhost}
 
 # --- SMS Chinguisoft ---

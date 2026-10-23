@@ -1,5 +1,6 @@
 package com.project.RecyConnect.Service;
 
+import com.project.RecyConnect.Model.User;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -226,6 +227,40 @@ public class PhoneVerificationService {
         Optional<PhoneVerification> valid = findValidCode(phone, code);
         valid.ifPresent(repo::delete);
         return valid.isPresent();
+    }
+
+    /**
+     * Rattache un code valide au compte qui vient de le saisir, pour un
+     * changement de numero : {@code PUT /api/users/{id}} n'acceptera le
+     * nouveau numero que si un tel code, non expire, existe pour ce compte.
+     * Le code n'est pas consomme ici — c'est la mise a jour du profil qui le
+     * consomme.
+     */
+    @Transactional
+    public boolean bindVerifiedCodeToUser(Long phone, String code, User user) {
+        Optional<PhoneVerification> valid = findValidCode(phone, code);
+        valid.ifPresent(pv -> {
+            pv.setUser(user);
+            repo.save(pv);
+        });
+        return valid.isPresent();
+    }
+
+    /**
+     * Consomme le code que {@code userId} a verifie pour {@code phone}.
+     *
+     * @return {@code false} si aucun code verifie et non expire n'est
+     *         rattache a ce compte pour ce numero.
+     */
+    @Transactional
+    public boolean consumeVerifiedCodeForUser(Long phone, Long userId) {
+        Optional<PhoneVerification> bound = repo.findByPhoneOrderByCreatedAtDesc(phone).stream()
+                .filter(pv -> pv.getUser() != null && userId.equals(pv.getUser().getId()))
+                .filter(pv -> pv.getCreatedAt() != null
+                        && ChronoUnit.MINUTES.between(pv.getCreatedAt(), OffsetDateTime.now()) <= CODE_TTL_MINUTES)
+                .findFirst();
+        bound.ifPresent(repo::delete);
+        return bound.isPresent();
     }
 
     private Optional<PhoneVerification> findValidCode(Long phone, String code) {

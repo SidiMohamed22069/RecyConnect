@@ -1,5 +1,7 @@
 package com.project.RecyConnect.Service;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.project.RecyConnect.DTO.EarningsDTO;
 import com.project.RecyConnect.DTO.NegotiationContactDTO;
 import com.project.RecyConnect.DTO.NegotiationDTO;
@@ -155,6 +157,13 @@ public class NegotiationService {
         if (receiver.getId().equals(sender.getId())) {
             throw new RuntimeException("You cannot negotiate on your own product");
         }
+        // Une annonce en pause, ecoulee ou archivee n'accepte plus d'offres :
+        // c'est tout le sens du statut (ProductStatus.PAUSED). Le statut nul
+        // des annonces anterieures au champ vaut "disponible".
+        if (product.getStatus() != null && product.getStatus() != ProductStatus.AVAILABLE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cette annonce n'accepte plus d'offres");
+        }
 
         offer.setProduct(product);
         offer.setSender(sender);
@@ -211,38 +220,19 @@ public class NegotiationService {
         }).orElseThrow(() -> new RuntimeException("Negotiation not found"));
     }
 
+    /**
+     * Retouche d'une offre par son auteur : prix et quantite, tant qu'elle est
+     * en attente. Rien d'autre.
+     *
+     * <p>L'ancienne version appliquait {@code status}, {@code senderId},
+     * {@code receiverId} et {@code productId} tels quels : un acheteur pouvait
+     * accepter sa propre offre en contournant {@code acceptBySeller} (verrou,
+     * stock), puis obtenir le numero du vendeur. Les transitions d'etat passent
+     * par {@code accept}, {@code reject}, {@code counter} et {@code cancel}.
+     */
     @Transactional
     public NegotiationDTO patch(Long id, NegotiationDTO dto) {
-        return repo.findById(id).map(existing -> {
-            String oldStatus = existing.getStatus();
-
-            if (dto.getStatus() != null) existing.setStatus(dto.getStatus());
-            if (dto.getPrice() != null) existing.setPrice(dto.getPrice());
-            if (dto.getQuantity() != null) existing.setQuantity(dto.getQuantity());
-            if (dto.getSenderId() != null)
-                userRepo.findById(dto.getSenderId()).ifPresent(existing::setSender);
-            if (dto.getReceiverId() != null)
-                userRepo.findById(dto.getReceiverId()).ifPresent(existing::setReceiver);
-            if (dto.getProductId() != null)
-                productRepo.findById(dto.getProductId()).ifPresent(existing::setProduct);
-
-            NegotiationDTO updated = toDTO(repo.save(existing));
-
-            if ("refused".equalsIgnoreCase(updated.getStatus())
-                    && !"refused".equalsIgnoreCase(oldStatus)
-                    && updated.getSenderId() != null
-                    && updated.getReceiverId() != null) {
-
-                notificationService.sendRefusalNotification(
-                        updated.getSenderId(),
-                        updated.getReceiverId(),
-                        updated.getId(),
-                        updated.getProductTitle()
-                );
-            }
-
-            return updated;
-        }).orElseThrow(() -> new RuntimeException("Negotiation not found"));
+        return update(id, dto);
     }
 
     @Transactional

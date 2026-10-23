@@ -1,0 +1,30 @@
+# Reverse proxy TLS devant l'API (Caddy, certificat Let's Encrypt automatique).
+# Installer Caddy sur l'hote (apt install caddy), copier ce fichier dans
+# /etc/caddy/Caddyfile, remplacer le domaine, puis: systemctl reload caddy.
+#
+# docker-compose publie l'API sur 127.0.0.1:8081 (API_BIND_ADDRESS) : seul ce
+# proxy y accede depuis l'exterieur.
+
+recyconnect.duckdns.org {
+    encode gzip
+
+    # /ws est le point d'entree STOMP/SockJS : Caddy relaie l'Upgrade WebSocket
+    # tout seul, rien de plus a configurer. Sans relais WebSocket, le mobile
+    # retomberait silencieusement en long-polling.
+    reverse_proxy 127.0.0.1:8081 {
+        # L'API lit X-Forwarded-For / X-Forwarded-Proto
+        # (server.forward-headers-strategy=native).
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Photos et pages de partage: laisser le navigateur les mettre en cache.
+    @static path /api/files/* /legal/*
+    header @static Cache-Control "public, max-age=86400"
+
+    # En-tetes de securite minimaux pour les pages HTML servies par l'API.
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+}

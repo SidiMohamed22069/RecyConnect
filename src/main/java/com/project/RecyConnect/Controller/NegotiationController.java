@@ -1,5 +1,9 @@
 package com.project.RecyConnect.Controller;
 
+import jakarta.validation.Valid;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.project.RecyConnect.Model.Role;
 import com.project.RecyConnect.DTO.EarningsDTO;
 import com.project.RecyConnect.DTO.NegotiationDTO;
 import com.project.RecyConnect.DTO.NegotiationHistoryDTO;
@@ -37,30 +41,57 @@ public class NegotiationController {
         this.moderationService = moderationService;
     }
 
+    /** Toutes les offres de la plateforme : administration seulement. */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<NegotiationDTO> getAll() { return service.findAll(); }
 
+    /** Une offre n'est lisible que par ses deux parties. */
     @GetMapping("/{id}")
-    public ResponseEntity<NegotiationDTO> getById(@PathVariable Long id) {
-        return service.findById(id).map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getById(@PathVariable Long id) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        NegotiationDTO existing = service.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!isAdmin(currentUser) && !isParty(existing, currentUser)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return ResponseEntity.ok(existing);
     }
 
     @GetMapping("/sender/{senderId}")
-    public List<NegotiationDTO> getBySender(@PathVariable Long senderId) {
-        return service.findBySenderId(senderId);
+    public ResponseEntity<?> getBySender(@PathVariable Long senderId) {
+        ResponseEntity<?> denied = denyIfNotSelfOrAdmin(senderId);
+        return denied != null ? denied : ResponseEntity.ok(service.findBySenderId(senderId));
     }
 
     @GetMapping("/receiver/{receiverId}")
-    public List<NegotiationDTO> getByReceiver(@PathVariable Long receiverId) {
-        return service.findByReceiverId(receiverId);
+    public ResponseEntity<?> getByReceiver(@PathVariable Long receiverId) {
+        ResponseEntity<?> denied = denyIfNotSelfOrAdmin(receiverId);
+        return denied != null ? denied : ResponseEntity.ok(service.findByReceiverId(receiverId));
     }
 
+    /**
+     * Les offres d'une annonce.
+     *
+     * <p>Le vendeur (et l'administration) voit tout ; n'importe quel autre
+     * compte ne voit que les siennes — c'est ainsi que l'acheteur retrouve
+     * son offre en cours sur une fiche. Les prix des concurrents ne sortent
+     * jamais.
+     */
     @GetMapping("/product/{productId}")
-    public List<NegotiationDTO> getByProduct(
+    public ResponseEntity<?> getByProduct(
             @PathVariable Long productId,
             @RequestParam(required = false) String status) {
-        return service.findByProductId(productId, status);
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return ResponseEntity.ok(onlyVisible(service.findByProductId(productId, status), productId, currentUser));
     }
 
     /**
@@ -71,23 +102,56 @@ public class NegotiationController {
      * vaudrait que sur la moitie de l'application.
      */
     @GetMapping("/product/{productId}/queue")
-    public List<NegotiationDTO> getQueueByProduct(@PathVariable Long productId) {
-        List<NegotiationDTO> queue = service.getQueueByProductId(productId);
+    public ResponseEntity<?> getQueueByProduct(@PathVariable Long productId) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
-            return queue;
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+        List<NegotiationDTO> queue = onlyVisible(service.getQueueByProductId(productId), productId, currentUser);
         Set<Long> hidden = moderationService.hiddenUserIds(currentUser.getId());
         if (hidden.isEmpty()) {
-            return queue;
+            return ResponseEntity.ok(queue);
         }
-        return queue.stream()
+        return ResponseEntity.ok(queue.stream()
                 .filter(offer -> !hidden.contains(offer.getSenderId()))
+                .collect(Collectors.toList()));
+    }
+
+    private boolean isAdmin(User user) {
+        return user.getRole() == Role.ADMIN;
+    }
+
+    private boolean isParty(NegotiationDTO offer, User user) {
+        return user.getId().equals(offer.getSenderId()) || user.getId().equals(offer.getReceiverId());
+    }
+
+    private ResponseEntity<?> denyIfNotSelfOrAdmin(Long userId) {
+        User currentUser = userService.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!isAdmin(currentUser) && !currentUser.getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return null;
+    }
+
+    /** Tout pour le vendeur ou l'administration, ses propres offres pour les autres. */
+    private List<NegotiationDTO> onlyVisible(List<NegotiationDTO> offers, Long productId, User currentUser) {
+        if (isAdmin(currentUser)) {
+            return offers;
+        }
+        Long sellerId = productService.findById(productId).map(p -> p.getUserId()).orElse(null);
+        if (sellerId != null && sellerId.equals(currentUser.getId())) {
+            return offers;
+        }
+        return offers.stream()
+                .filter(offer -> currentUser.getId().equals(offer.getSenderId()))
                 .collect(Collectors.toList());
     }
 
     @PostMapping
-    public ResponseEntity<NegotiationDTO> create(@RequestBody NegotiationDTO dto) {
+    public ResponseEntity<NegotiationDTO> create(@Valid @RequestBody NegotiationDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -105,13 +169,15 @@ public class NegotiationController {
         dto.setSenderId(currentUser.getId());
         try {
             return ResponseEntity.ok(service.save(dto));
+        } catch (ResponseStatusException e) {
+            throw e; // 409 "n'accepte plus d'offres", avec son message
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<NegotiationDTO> update(@PathVariable Long id, @RequestBody NegotiationDTO dto) {
+    public ResponseEntity<NegotiationDTO> update(@PathVariable Long id, @Valid @RequestBody NegotiationDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -134,7 +200,7 @@ public class NegotiationController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<NegotiationDTO> patch(@PathVariable Long id, @RequestBody NegotiationDTO dto) {
+    public ResponseEntity<NegotiationDTO> patch(@PathVariable Long id, @Valid @RequestBody NegotiationDTO dto) {
         User currentUser = userService.getCurrentUser();
         if (currentUser == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

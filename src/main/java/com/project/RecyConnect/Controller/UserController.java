@@ -1,5 +1,10 @@
 package com.project.RecyConnect.Controller;
 
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.server.ResponseStatusException;
 import com.project.RecyConnect.DTO.NotificationPreferencesDTO;
 import com.project.RecyConnect.DTO.PublicUserDTO;
 import com.project.RecyConnect.DTO.UserDTO;
@@ -57,11 +62,55 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserDTO> getAll() { return service.findAll(); }
 
+    /**
+     * La fiche complete (numero compris) n'est servie qu'a son titulaire et
+     * a l'administration ; tout autre compte obtient la fiche publique.
+     * Servie a tous, elle faisait de {@code /api/users/{id}} un annuaire.
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getById(@PathVariable Long id) {
-        return service.findById(id)
-                .map(ResponseEntity::ok)
+    public ResponseEntity<?> getById(@PathVariable Long id) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+        if (isAdmin || currentUser.getId().equals(id)) {
+            return service.findById(id)
+                    .<ResponseEntity<?>>map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        }
+        return service.getPublicProfile(id)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Nouveau jeton FCM de l'appareil connecte (Firebase les fait tourner).
+     * Corps : {@code {"token": "..."}}. L'en-tete {@code X-Device-Id}, s'il
+     * est present, doit etre celui de la session.
+     */
+    @RequestMapping(value = "/{id}/fcm-token", method = { RequestMethod.POST, RequestMethod.PUT })
+    public ResponseEntity<?> updateFcmToken(@PathVariable Long id,
+                                            @RequestBody(required = false) Map<String, String> body,
+                                            @RequestHeader(value = "X-Device-Id", required = false) String deviceId) {
+        User currentUser = service.getCurrentUser();
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!currentUser.getId().equals(id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "You can only update your own device token"));
+        }
+        String token = body == null ? null : body.get("token");
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "token is required"));
+        }
+        boolean updated = userSessionService.updateFcmToken(id, deviceId, token);
+        if (!updated) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "No active session for this device"));
+        }
+        return ResponseEntity.ok(Map.of("message", "FCM token updated"));
     }
 
     /**
@@ -149,26 +198,28 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody UserDTO dto) {
+    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
         ResponseEntity<?> denied = denyIfNotSelfOrAdmin(id);
         if (denied != null) {
             return denied;
         }
         try {
-            return ResponseEntity.ok(service.update(id, dto));
+            return ResponseEntity.ok(service.update(id, dto, isAdmin()));
+        } catch (ResponseStatusException e) {
+            throw e; // 400 / 409 avec leur message
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<?> patch(@PathVariable Long id, @RequestBody UserDTO dto) {
+    public ResponseEntity<?> patch(@PathVariable Long id, @Valid @RequestBody UserDTO dto) {
         ResponseEntity<?> denied = denyIfNotSelfOrAdmin(id);
         if (denied != null) {
             return denied;
         }
         try {
-            User updatedUser = service.patchAndGetUser(id, dto);
+            User updatedUser = service.patchAndGetUser(id, dto, isAdmin());
             
                 // Générer un token cohérent avec la session active (si présente)
                 String newToken;
@@ -192,6 +243,8 @@ public class UserController {
                 "user", userDTO,
                 "token", newToken
             ));
+        } catch (ResponseStatusException e) {
+            throw e; // 400 / 409 avec leur message
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -338,6 +391,11 @@ public class UserController {
      *
      * @return null si l'operation est autorisee, sinon la reponse d'erreur a renvoyer.
      */
+    private boolean isAdmin() {
+        User currentUser = service.getCurrentUser();
+        return currentUser != null && currentUser.getRole() == Role.ADMIN;
+    }
+
     private ResponseEntity<?> denyIfNotSelfOrAdmin(Long targetUserId) {
         User currentUser = service.getCurrentUser();
         if (currentUser == null) {
@@ -352,7 +410,9 @@ public class UserController {
         return null;
     }
 
+    /** Recherche par numero : administration seulement (sinon, un annuaire). */
     @GetMapping("/by-phone/{phone}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> getByPhone(@PathVariable Long phone) {
         return service.findByPhone(phone)
                 .map(ResponseEntity::ok)

@@ -10,4 +10,7 @@ public interface SearchAlertRepository extends JpaRepository<SearchAlert, Long> 
     List<SearchAlert> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<SearchAlert> findByActiveTrue();
+
+    /** Suppression de compte. */
+    void deleteByUserId(Long userId);
 }
