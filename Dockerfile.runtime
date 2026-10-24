@@ -1,0 +1,37 @@
+# Image d'execution seule, a partir d'un JAR construit ailleurs.
+#
+# Le Dockerfile principal compile avec Maven dans l'image, ce qui reclame
+# 1,5 a 2 Go de RAM : sur le serveur de 4 Go ou tournent deja l'API et
+# PostgreSQL, la construction se fait tuer par le noyau (DEPLOIEMENT.md §7).
+# Ici, on construit le JAR sur le poste de developpement ou en CI :
+#
+#   JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./mvnw package -DskipTests
+#   cp target/RecyConnect-*.jar deploy/app.jar      # puis scp vers le serveur
+#
+# et sur le serveur, docker-compose.override.yml (copie de
+# deploy/docker-compose.jar.yml) fait pointer le service app sur ce fichier :
+#
+#   sudo docker compose up -d --build app
+#
+# Le reste est identique au Dockerfile principal : utilisateur non root,
+# healthcheck, profil prod.
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+RUN addgroup -S app && adduser -S -G app app \
+    && mkdir -p /app/uploads && chown -R app:app /app \
+    && apk add --no-cache curl
+
+COPY --chown=app:app deploy/app.jar app.jar
+
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV SERVER_PORT=8081
+
+EXPOSE 8081
+
+USER app
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD curl -fsS http://localhost:${SERVER_PORT:-8081}/api/app/version > /dev/null || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

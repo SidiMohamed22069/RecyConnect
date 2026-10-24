@@ -602,3 +602,8 @@ Détail et justification de chaque point : `../../REVUE_PRE_DEPLOIEMENT.md`.
   rotation par Firebase.
 - Validation des corps (`@Valid`) : erreurs en 400 `{"message"}` ; conflits d'intégrité en 409.
 - CORS : seules les origines de `APP_CLIENT_URL` sont acceptées (HTTP et WebSocket).
+
+**Déployer sans construire sur le serveur** (4 Go de RAM, voir DEPLOIEMENT.md §7) : construire le
+JAR sur le poste (`./mvnw package -DskipTests`), le copier dans `deploy/app.jar` sur le serveur,
+copier `deploy/docker-compose.jar.yml` en `docker-compose.override.yml`, puis
+`sudo docker compose up -d --build app`. `Dockerfile.runtime` ne fait que copier le JAR.

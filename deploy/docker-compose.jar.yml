@@ -1,0 +1,9 @@
+# Surcharge compose pour deployer un JAR construit ailleurs (voir
+# Dockerfile.runtime). Sur le serveur :
+#   cp deploy/docker-compose.jar.yml docker-compose.override.yml
+# docker compose la charge alors automatiquement avec docker-compose.yml.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.runtime

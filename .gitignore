@@ -55,3 +55,8 @@ src/main/resources/*.json
 # Classpath genere par dependency:build-classpath (lancement sans plugin)
 classpath.txt
 cp.txt
+
+# Deploiement par JAR (Dockerfile.runtime): le JAR copie et la surcharge
+# compose propre au serveur ne se versionnent pas.
+deploy/app.jar
+docker-compose.override.yml
