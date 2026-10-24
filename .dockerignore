@@ -6,3 +6,11 @@ target/
 .gitignore
 *.md
 uploads/
+# Secrets et fichiers locaux: jamais dans le contexte de build
+.env
+.env.*
+!.env.example
+secrets/
+src/main/resources/application.properties
+classpath.txt
+cp.txt

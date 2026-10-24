@@ -1,5 +1,7 @@
 package com.project.RecyConnect.Model;
 
+import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.OnDelete;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,10 +37,12 @@ public class Favorite {
     private OffsetDateTime createdAt;
 
     @ManyToOne(optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne(optional = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "product_id")
     private Product product;
 

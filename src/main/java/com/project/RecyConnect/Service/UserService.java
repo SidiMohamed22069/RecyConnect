@@ -1,5 +1,8 @@
 package com.project.RecyConnect.Service;
 
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -31,10 +34,13 @@ public class UserService implements UserDetailsService {
     private final ProductRepository productRepository;
     private final NegotiationRepository negotiationRepository;
     private final ReviewRepository reviewRepository;
+    private final PhoneVerificationService phoneVerificationService;
 
     public UserService(UserRepo userRepository, ProductRepository productRepository,
                        NegotiationRepository negotiationRepository,
-                       ReviewRepository reviewRepository) {
+                       ReviewRepository reviewRepository,
+                       PhoneVerificationService phoneVerificationService) {
+        this.phoneVerificationService = phoneVerificationService;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.negotiationRepository = negotiationRepository;
@@ -128,35 +134,73 @@ public class UserService implements UserDetailsService {
     }
 
     public UserDTO update(Long id, UserDTO dto) {
-        return userRepository.findById(id).map(existing -> {
-            if (dto.getUsername() != null) existing.setUsername(dto.getUsername());
-            if (dto.getPhone() != null) existing.setPhone(dto.getPhone());
-            if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
-            User saved = userRepository.save(existing);
-            return toDTO(saved);
-        }).orElseThrow(() -> new RuntimeException("User not found"));
+        return update(id, dto, false);
+    }
+
+    /** @param phoneVerified vrai quand l'appelant (administrateur) n'a pas a prouver le numero. */
+    @Transactional
+    public UserDTO update(Long id, UserDTO dto, boolean phoneVerified) {
+        return toDTO(patchAndGetUser(id, dto, phoneVerified));
     }
 
     public UserDTO patch(Long id, UserDTO dto) {
-        return userRepository.findById(id).map(existing -> {
-            if (dto.getUsername() != null) existing.setUsername(dto.getUsername());
-            if (dto.getPhone() != null) existing.setPhone(dto.getPhone());
-            if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
-            User saved = userRepository.save(existing);
-            return toDTO(saved);
-        }).orElseThrow(() -> new RuntimeException("User not found"));
+        return update(id, dto, false);
     }
 
     /**
      * Met à jour un utilisateur et retourne l'entité User (pour la génération d'un nouveau token JWT)
      */
     public User patchAndGetUser(Long id, UserDTO dto) {
+        return patchAndGetUser(id, dto, false);
+    }
+
+    @Transactional
+    public User patchAndGetUser(Long id, UserDTO dto, boolean phoneVerified) {
         return userRepository.findById(id).map(existing -> {
-            if (dto.getUsername() != null) existing.setUsername(dto.getUsername());
-            if (dto.getPhone() != null) existing.setPhone(dto.getPhone());
-            if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
+            applyProfileChanges(existing, dto, phoneVerified);
             return userRepository.save(existing);
         }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    /**
+     * Nom, numero et photo.
+     *
+     * <p>Le nom et le numero sont uniques : sans ce controle, un compte
+     * pouvait prendre le nom d'un autre — y compris "admin" — et la victime,
+     * devenue ambigue pour {@code findByUsername}, ne pouvait plus se
+     * connecter. Le numero, lui, doit avoir ete verifie par SMS depuis ce
+     * compte ({@code /api/auth/send-code} puis {@code /verify-code}), sans
+     * quoi n'importe qui pouvait afficher le numero d'autrui dans
+     * {@code /contact}.
+     *
+     * @throws ResponseStatusException 400 nom vide, 409 nom ou numero deja
+     *         pris, 409 numero non verifie.
+     */
+    private void applyProfileChanges(User existing, UserDTO dto, boolean phoneVerified) {
+        if (dto.getUsername() != null && !dto.getUsername().equals(existing.getUsername())) {
+            String username = dto.getUsername().trim();
+            if (username.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le nom d'utilisateur est obligatoire");
+            }
+            User other = userRepository.findByUsername(username);
+            if (other != null && !other.getId().equals(existing.getId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Ce nom d'utilisateur est déjà utilisé");
+            }
+            existing.setUsername(username);
+        }
+        if (dto.getPhone() != null && !dto.getPhone().equals(existing.getPhone())) {
+            Long phone = dto.getPhone();
+            User other = userRepository.findByPhone(phone);
+            if (other != null && !other.getId().equals(existing.getId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Ce numéro de téléphone est déjà utilisé");
+            }
+            if (!phoneVerified && !phoneVerificationService.consumeVerifiedCodeForUser(phone, existing.getId())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Vérifiez d'abord le nouveau numéro avec le code reçu par SMS");
+            }
+            existing.setPhone(phone);
+        }
+        if (dto.getImageData() != null) existing.setImageData(dto.getImageData());
     }
 
     // `delete(Long)` a ete retiree: un `deleteById` ne suffit pas a supprimer un

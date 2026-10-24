@@ -34,6 +34,12 @@ public class Product {
 
     private OffsetDateTime createdAt;
     private String title;
+    /**
+     * TEXT et non varchar(255) : une description d'annonce depasse vite 255
+     * caracteres, et l'insertion echouait en 500. Sur une base existante,
+     * {@code ddl-auto=update} ne change pas le type : voir docs/migration-v2.sql.
+     */
+    @Column(columnDefinition = "TEXT")
     private String description;
     private Double price;
     private String unit;

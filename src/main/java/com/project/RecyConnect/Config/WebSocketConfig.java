@@ -1,5 +1,6 @@
 package com.project.RecyConnect.Config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -15,8 +16,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     
     private final WebSocketAuthInterceptor authInterceptor;
+    private final String[] allowedOrigins;
     
-    public WebSocketConfig(WebSocketAuthInterceptor authInterceptor) {
+    public WebSocketConfig(WebSocketAuthInterceptor authInterceptor,
+                           @Value("${app.client.url:}") String clientAppUrls) {
+        this.allowedOrigins = SimpleCorsFilter.parseOrigins(clientAppUrls).toArray(new String[0]);
         this.authInterceptor = authInterceptor;
     }
     
@@ -31,8 +35,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Endpoint pour se connecter au WebSocket
+        // Memes origines que le CORS HTTP (app.client.url). Sans en-tete
+        // Origin — cas de l'application mobile — Spring laisse passer.
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*") // En production, spécifiez vos domaines
+                .setAllowedOrigins(allowedOrigins)
                 .withSockJS();
     }
     

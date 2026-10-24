@@ -27,8 +27,16 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * Uniques en base : deux comptes au meme nom ou au meme numero rendaient
+     * {@code findByUsername}/{@code findByPhone} ambigus, et la victime ne
+     * pouvait plus se connecter. Verifier l'absence de doublons avant de
+     * deployer (voir docs/migration-v2.sql).
+     */
+    @Column(unique = true)
     private String username;
 
+    @Column(unique = true)
     private Long phone;
 
     @Column(columnDefinition = "TEXT")

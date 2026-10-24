@@ -81,6 +81,13 @@ services:
       APP_VERSION_MINIMUM: ${APP_VERSION_MINIMUM:-}
       APP_VERSION_ANDROID_URL: ${APP_VERSION_ANDROID_URL:-https://play.google.com/store/apps/details?id=com.recyconnect.app.neyan}
       APP_VERSION_IOS_URL: ${APP_VERSION_IOS_URL:-}
+      # Liens Android: empreinte(s) SHA-256 du certificat de signature Play,
+      # pour /.well-known/assetlinks.json (vide = 404, Android ouvre le navigateur).
+      ANDROID_SHA256_FINGERPRINTS: ${ANDROID_SHA256_FINGERPRINTS:-}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      # Limite memoire de la JVM: 70 % de celle du conteneur (mem_limit ci-dessous).
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:MaxRAMPercentage=70}
+    mem_limit: ${APP_MEM_LIMIT:-1g}
     volumes:
       - uploads_data:/app/uploads
       # Cle de service Firebase, en lecture seule. Placer le fichier a cet emplacement
@@ -89,7 +96,10 @@ services:
       # place. L'application demarre quand meme, en journalisant "FCM desactive".
       - ${FCM_SERVICE_ACCOUNT_KEY_FILE:-./secrets/service-account-key.json}:/app/secrets/service-account-key.json:ro
     ports:
-      - "8081:8081"
+      # Boucle locale seulement: c'est le reverse proxy (Caddy/Nginx, TLS) qui
+      # expose l'API. Mettre API_BIND_ADDRESS=0.0.0.0 dans .env si le proxy
+      # tourne dans un autre conteneur sans reseau partage, ou pour un test.
+      - "${API_BIND_ADDRESS:-127.0.0.1}:8081:8081"
 
 volumes:
   postgres_data:

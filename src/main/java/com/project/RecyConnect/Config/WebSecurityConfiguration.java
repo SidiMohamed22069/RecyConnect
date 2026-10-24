@@ -53,6 +53,11 @@ public class WebSecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/legal", "/legal/", "/legal/**")
                         .permitAll()
 
+                        // Verification des liens Android (assetlinks.json) :
+                        // Google la lit sans aucun jeton.
+                        .requestMatchers(HttpMethod.GET, "/.well-known/**")
+                        .permitAll()
+
                         // Politique de version de l'application mobile.
                         // Interrogee au demarrage, avant toute connexion: une
                         // version devenue incompatible avec le contrat de l'API

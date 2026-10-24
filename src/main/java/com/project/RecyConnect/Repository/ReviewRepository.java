@@ -1,5 +1,6 @@
 package com.project.RecyConnect.Repository;
 
+import java.util.Collection;
 import com.project.RecyConnect.Model.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,4 +21,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.target.id = :targetId")
     Double averageRatingByTargetId(@Param("targetId") Long targetId);
+
+    /** Suppression de compte : avis donnes et recus. */
+    void deleteByAuthorIdOrTargetId(Long authorId, Long targetId);
+    /** Suppression d'offres : les avis qui s'y rattachent. */
+    void deleteByNegotiationIdIn(Collection<Long> negotiationIds);
 }
